@@ -93,6 +93,12 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
 .demotag{display:none;font-size:10.5px;padding:3px 9px;border-radius:99px;background:#3d1520;color:#ff9aac;font-weight:700;letter-spacing:.06em}
 .demo .demotag{display:inline-block}
 .demo #list,.demo #main{max-height:calc(100dvh - 52px)}
+
+/* champs de saisie : texte noir sur fond blanc partout (12/11) */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]),select,textarea{background:#fff!important;color:#000!important;-webkit-text-fill-color:#000;caret-color:#000}
+input::placeholder,textarea::placeholder{color:#777!important;-webkit-text-fill-color:#777}
+select option,select optgroup{background:#fff;color:#000}
+input:disabled,select:disabled,textarea:disabled{background:#eee!important;color:#555!important;-webkit-text-fill-color:#555}
 </style>
 </head>
 <body>
@@ -279,17 +285,28 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
     communeMode();
     const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + (S.insee ? '&insee=eq.' + encodeURIComponent(S.insee) : '') + '&select=*&order=title', { headers: H() });
     if (!r.ok) throw new Error('Lecture impossible (' + r.status + ')');
-    S.rows = await r.json(); communeSelect(); renderList();
+    S.rows = await r.json(); await guessInsee(); communeSelect(); renderList();
   }
   // espace de l'agglomération (code agglo ou ANTEMIC) : choix de la commune dont on modifie les lieux
-  const rowInsee = (row) => row.insee || ((S.cfg.pois || []).find(p => p.id === row.poi_id) || {}).insee || '';
+  const rowInsee = (row) => ((S.cfg.pois || []).find(p => p.id === row.poi_id) || {}).insee || row.insee || (S.poiInsee || {})[row.poi_id] || ''; // config.json d'abord : commune recalculée d'après la position à chaque mise en ligne
+  // dernier recours (base sans colonne insee, carte publiée avant le 12/11) : commune déduite de la position du lieu et des contours de la carte (map.json)
+  async function guessInsee() {
+    if (!S.cfg.epci || S.insee || S.poiInsee || !S.rows.some(r => !rowInsee(r))) return;
+    try {
+      const r = await fetch(cfile(S.slug, 'map.json'), { cache: 'force-cache' }); if (!r.ok) return; const M = await r.json();
+      const rings = (M.communes || []).map(c => { const g = []; for (let i = 0; i + 1 < c.ring.length; i += 2) g.push([c.ring[i], c.ring[i + 1]]); return { insee: c.insee, g }; });
+      const pip = (x, y, g) => { let k = false; for (let i = 0, j = g.length - 1; i < g.length; j = i++) { const [xi, yi] = g[i], [xj, yj] = g[j]; if (((yi > y) !== (yj > y)) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) k = !k; } return k; };
+      S.poiInsee = {}; for (const p of S.cfg.pois || []) if (p.x != null) { const c = rings.find(q => pip(p.x, p.y, q.g)); if (c) S.poiInsee[p.id] = c.insee; }
+    } catch (e) {}
+  }
   const autoFirst = () => { const agg = !$('#fComm').hidden; const r = S.rows.find(x => !agg || (S.fComm && rowInsee(x) === S.fComm)); if (r) edit(r); }; // agglo : pas de lieu ouvert tant qu'aucune commune n'est choisie
   function communeSelect() {
-    const sel = $('#fComm'); const list = S.cfg.epci && !S.insee ? [{ insee: S.cfg.insee, nom: S.cfg.communeNom || S.cfg.name }, ...(S.cfg.communes || [])] : [];
+    // communes proposées : celles dont la carte 3D est en ligne (cfg.submaps)
+    const sel = $('#fComm'); const list = S.cfg.epci && !S.insee ? [{ insee: S.cfg.insee, nom: S.cfg.communeNom || S.cfg.name }, ...(S.cfg.communes || [])].filter(c => S.cfg.submaps?.[c.insee]) : [];
     sel.hidden = !list.length; if (!list.length) { S.fComm = ''; return; }
     const n = {}; for (const r of S.rows) { const k = rowInsee(r); n[k] = (n[k] || 0) + 1; }
     const keep = S.fComm ?? (() => { try { return sessionStorage.getItem('antemic-fcomm-' + S.slug) || ''; } catch (e) { return ''; } })();
-    sel.innerHTML = ''; sel.append(new Option(`Choisir une commune… (${S.rows.length} lieux en tout)`, ''));
+    sel.innerHTML = ''; sel.append(new Option(`Choisir une commune… (${list.length} carte${list.length > 1 ? 's' : ''} en ligne)`, ''));
     for (const c of list.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))) sel.append(new Option(`${c.nom} (${n[c.insee] || 0} lieu${(n[c.insee] || 0) > 1 ? 'x' : ''})`, c.insee));
     sel.value = list.some(c => c.insee === keep) ? keep : ''; S.fComm = sel.value;
     sel.onchange = () => { S.fComm = sel.value; try { sessionStorage.setItem('antemic-fcomm-' + S.slug, S.fComm); } catch (e) {} S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); const first = S.rows.find(r => !S.fComm || rowInsee(r) === S.fComm); if (S.fComm && first) edit(first); };
