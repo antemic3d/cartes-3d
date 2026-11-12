@@ -201,15 +201,18 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
   $('#commune').onchange = () => openCommune($('#commune').value).catch(e => alert(e.message));
   document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', String(x === b))); document.querySelectorAll('.pane').forEach(p => p.hidden = p.id !== b.dataset.p); });
   async function login(code) {
-    const slug = slugFromCode(code); if (!slug) throw new Error('Code incomplet.');
-    const r = await fetch(cfile(slug, 'config.json'), { cache: 'no-cache' });
+    const login0 = slugFromCode(code); if (!login0) throw new Error('Code incomplet.');
+    let slug = login0; S.insee = '';
+    let r = await fetch(cfile(slug, 'config.json'), { cache: 'no-cache' });
+    // accès d'une commune d'agglomération : code <AGGLO>-<INSEE>-XXXX-XXXX → carte de l'agglomération, lieux de cette commune seulement
+    if (!r.ok && !DEMO) { const m = slug.match(/^(.+)-(\d[0-9ab]\d{3})$/); if (m) { const r2 = await fetch(cfile(m[1], 'config.json'), { cache: 'no-cache' }); if (r2.ok) { r = r2; slug = m[1]; S.insee = m[2].toUpperCase(); } } }
     if (!r.ok) throw new Error(DEMO ? 'Démonstration indisponible : rouvrez le lien reçu.' : 'Code inconnu.');
     S.cfg = await r.json(); S.slug = slug;
     if (!sb()?.url) throw new Error('Cette carte n’est pas encore reliée à l’espace commune. Contactez ANTEMIC.');
-    const t = await fetch(sb().url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: sb().anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: slug + '@clients.antemic.fr', password: code.trim().toUpperCase() }) });
+    const t = await fetch(sb().url + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: sb().anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: login0 + '@clients.antemic.fr', password: code.trim().toUpperCase() }) });
     if (!t.ok) throw new Error(t.status === 400 ? 'Code incorrect.' : 'Connexion impossible (' + t.status + ').');
-    const j = await t.json(); S.token = j.access_token; S.exp = Date.now() + (j.expires_in - 60) * 1000; S.email = slug + '@clients.antemic.fr';
-    try { sessionStorage.setItem('antemic-admin', JSON.stringify({ slug, token: S.token, exp: S.exp })); } catch (e) {}
+    const j = await t.json(); S.token = j.access_token; S.exp = Date.now() + (j.expires_in - 60) * 1000; S.email = login0 + '@clients.antemic.fr';
+    try { sessionStorage.setItem('antemic-admin', JSON.stringify({ slug, insee: S.insee, email: S.email, token: S.token, exp: S.exp })); } catch (e) {}
   }
   function theme() {
     const th = S.cfg.theme || {}; const r = document.documentElement.style;
@@ -264,9 +267,17 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
     } catch (e) { $('#optMsg').textContent = 'Erreur : ' + e.message; }
   }
   ['oTime', 'oSun', 'oMusic', 'oSpeed', 'oPick'].forEach(id => $('#' + id).addEventListener('change', saveOpts)); document.querySelectorAll('[name=oOrd]').forEach(r => r.addEventListener('change', saveOpts));
+  // compte d'une commune d'agglomération : ses lieux seulement, pas les réglages de la carte (communs à l'agglomération)
+  function communeMode() {
+    const tb = document.querySelector('.tabs button[data-p="pOpts"]'); if (tb) tb.hidden = !!S.insee;
+    if (S.insee) { const lb = document.querySelector('.tabs button[data-p="pLieux"]'); if (lb) lb.click();
+      const cm = S.insee === S.cfg.insee ? (S.cfg.communeNom || S.cfg.name) : ((S.cfg.communes || []).find(x => x.insee === S.insee) || {}).nom || S.insee;
+      $('#cname').textContent = cm + ' · ' + String(S.cfg.name || '').replace(/ \(démo\)$/, ''); }
+  }
   async function load() {
     loadOpts();
-    const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + '&select=*&order=title', { headers: H() });
+    communeMode();
+    const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + (S.insee ? '&insee=eq.' + encodeURIComponent(S.insee) : '') + '&select=*&order=title', { headers: H() });
     if (!r.ok) throw new Error('Lecture impossible (' + r.status + ')');
     S.rows = await r.json(); renderList();
   }
@@ -401,7 +412,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
     const s = JSON.parse(sessionStorage.getItem('antemic-admin') || 'null'); if (!s || Date.now() > s.exp) return;
     if (s.staff) { S.sbc = s.sbc; S.cfg = { supabase: s.sbc }; S.token = s.token; S.exp = s.exp; S.staff = s.staff; S.level = s.level || 'superadmin'; $('#dlEditor').hidden = !s.staff.includes('@'); S.email = s.staff.includes('@') ? s.staff : s.staff + '@equipe.antemic.fr'; $('#login').hidden = true; $('#app').hidden = false; $('#logout').hidden = false; const l = await communes(); await openCommune(l.some(c => c.id === s.slug) ? s.slug : l[0].id); return; }
     const r = await fetch(cfile(s.slug, 'config.json'), { cache: 'no-cache' }); if (!r.ok) return;
-    S.cfg = await r.json(); S.slug = s.slug; S.token = s.token; S.exp = s.exp; theme(); $('#login').hidden = true; $('#app').hidden = false; await load(); if (S.rows.length) edit(S.rows[0]);
+    S.cfg = await r.json(); S.slug = s.slug; S.insee = s.insee || ''; if (s.email) S.email = s.email; S.token = s.token; S.exp = s.exp; theme(); $('#login').hidden = true; $('#app').hidden = false; await load(); if (S.rows.length) edit(S.rows[0]);
   } catch (e) {} })();
 })();
 // œil sur les champs mot de passe
