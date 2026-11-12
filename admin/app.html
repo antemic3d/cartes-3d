@@ -119,7 +119,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
 <section id="app" hidden>
   <nav id="list">
     <div class="tabs" role="tablist"><button type="button" data-p="pLieux" aria-selected="true">Lieux</button><button type="button" data-p="pOpts" aria-selected="false">Réglages de la carte</button></div>
-    <div class="pane" id="pLieux"><input id="filter" type="search" placeholder="Rechercher un lieu…" aria-label="Rechercher un lieu"><div id="items"></div></div>
+    <div class="pane" id="pLieux"><select id="fComm" hidden aria-label="Commune" style="width:100%;margin-bottom:8px"></select><input id="filter" type="search" placeholder="Rechercher un lieu…" aria-label="Rechercher un lieu"><div id="items"></div></div>
     <div class="pane" id="pOpts" hidden><div id="opts">
       <div class="group"><b>Affichage</b>
         <label class="opt"><input type="checkbox" id="oTime"> Heure du jour (jour / nuit)</label>
@@ -279,19 +279,37 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
     communeMode();
     const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + (S.insee ? '&insee=eq.' + encodeURIComponent(S.insee) : '') + '&select=*&order=title', { headers: H() });
     if (!r.ok) throw new Error('Lecture impossible (' + r.status + ')');
-    S.rows = await r.json(); renderList();
+    S.rows = await r.json(); communeSelect(); renderList();
+  }
+  // espace de l'agglomération (code agglo ou ANTEMIC) : choix de la commune dont on modifie les lieux
+  const rowInsee = (row) => row.insee || ((S.cfg.pois || []).find(p => p.id === row.poi_id) || {}).insee || '';
+  const autoFirst = () => { const agg = !$('#fComm').hidden; const r = S.rows.find(x => !agg || (S.fComm && rowInsee(x) === S.fComm)); if (r) edit(r); }; // agglo : pas de lieu ouvert tant qu'aucune commune n'est choisie
+  function communeSelect() {
+    const sel = $('#fComm'); const list = S.cfg.epci && !S.insee ? [{ insee: S.cfg.insee, nom: S.cfg.communeNom || S.cfg.name }, ...(S.cfg.communes || [])] : [];
+    sel.hidden = !list.length; if (!list.length) { S.fComm = ''; return; }
+    const n = {}; for (const r of S.rows) { const k = rowInsee(r); n[k] = (n[k] || 0) + 1; }
+    const keep = S.fComm ?? (() => { try { return sessionStorage.getItem('antemic-fcomm-' + S.slug) || ''; } catch (e) { return ''; } })();
+    sel.innerHTML = ''; sel.append(new Option(`Choisir une commune… (${S.rows.length} lieux en tout)`, ''));
+    for (const c of list.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))) sel.append(new Option(`${c.nom} (${n[c.insee] || 0} lieu${(n[c.insee] || 0) > 1 ? 'x' : ''})`, c.insee));
+    sel.value = list.some(c => c.insee === keep) ? keep : ''; S.fComm = sel.value;
+    sel.onchange = () => { S.fComm = sel.value; try { sessionStorage.setItem('antemic-fcomm-' + S.slug, S.fComm); } catch (e) {} S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); const first = S.rows.find(r => !S.fComm || rowInsee(r) === S.fComm); if (S.fComm && first) edit(first); };
   }
   function renderList() {
     const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); const f = fold($('#filter').value.trim()); const box = $('#items'); box.innerHTML = '';
     const cats = Object.fromEntries((S.cfg.categories || []).map(c => [c.id, c.label]));
     const base = Object.fromEntries((S.cfg.pois || []).map(p => [p.id, p]));
+    const agg = !$('#fComm').hidden;
+    if (agg && !S.fComm && !f) { box.append(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Choisissez une commune ci-dessus pour afficher ses lieux (ou recherchez un lieu par son nom).' })); return; }
+    let shown = 0;
     for (const row of S.rows) {
       if (f && !fold(row.title).includes(f)) continue;
+      if (agg && S.fComm && rowInsee(row) !== S.fComm) continue; shown++;
       const b = document.createElement('button'); b.type = 'button'; b.className = 'item' + (S.cur?.poi_id === row.poi_id ? ' on' : '');
       const im = row.photo_url ? Object.assign(document.createElement('img'), { src: photoUrl(row.photo_url), alt: '' }) : Object.assign(document.createElement('span'), { className: 'ph' });
       const t = document.createElement('span'); const bb = document.createElement('b'); bb.textContent = row.title; const sm = document.createElement('small'); sm.textContent = cats[base[row.poi_id]?.cat] || '';
       t.append(bb, sm); b.append(im, t); b.onclick = () => edit(row); box.append(b);
     }
+    if (agg && !shown) box.append(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Aucun lieu pour cette commune.' }));
   }
   function edit(row) {
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
@@ -359,7 +377,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
   async function start(code) {
     if (isStaff(code)) { await loginStaff(code); $('#login').hidden = true; $('#app').hidden = false; $('#logout').hidden = false; const l = await communes(); await openCommune(l[0].id); return; }
     await login(code); theme(); $('#login').hidden = true; $('#app').hidden = false; await load();
-    if (S.rows.length) edit(S.rows[0]);
+    autoFirst();
   }
   let teamMode = false;
   const setMode = (t) => { teamMode = t; $('#lmTeam').setAttribute('aria-selected', String(t)); $('#lmCommune').setAttribute('aria-selected', String(!t)); $('#fTeam').hidden = !t; $('#fCommune').hidden = t; (t ? $('#tid') : $('#code')).focus(); };
@@ -412,7 +430,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
     const s = JSON.parse(sessionStorage.getItem('antemic-admin') || 'null'); if (!s || Date.now() > s.exp) return;
     if (s.staff) { S.sbc = s.sbc; S.cfg = { supabase: s.sbc }; S.token = s.token; S.exp = s.exp; S.staff = s.staff; S.level = s.level || 'superadmin'; $('#dlEditor').hidden = !s.staff.includes('@'); S.email = s.staff.includes('@') ? s.staff : s.staff + '@equipe.antemic.fr'; $('#login').hidden = true; $('#app').hidden = false; $('#logout').hidden = false; const l = await communes(); await openCommune(l.some(c => c.id === s.slug) ? s.slug : l[0].id); return; }
     const r = await fetch(cfile(s.slug, 'config.json'), { cache: 'no-cache' }); if (!r.ok) return;
-    S.cfg = await r.json(); S.slug = s.slug; S.insee = s.insee || ''; if (s.email) S.email = s.email; S.token = s.token; S.exp = s.exp; theme(); $('#login').hidden = true; $('#app').hidden = false; await load(); if (S.rows.length) edit(S.rows[0]);
+    S.cfg = await r.json(); S.slug = s.slug; S.insee = s.insee || ''; if (s.email) S.email = s.email; S.token = s.token; S.exp = s.exp; theme(); $('#login').hidden = true; $('#app').hidden = false; await load(); autoFirst();
   } catch (e) {} })();
 })();
 // œil sur les champs mot de passe
