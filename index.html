@@ -654,6 +654,45 @@ body.edit .pin{cursor:move}
   :root[data-style=patrimoine] #routeBtn{display:none!important}
   .tpl .map-footer{bottom:2px;font-size:7px}
 }
+
+/* ---------- 16/11/2026 : panneau gauche à 1/6 de l'écran, logo en tête sur toute la largeur, itinéraire à la place du panneau (tous templates) ---------- */
+:root{--sidew:clamp(250px,calc(100vw / 6),440px)}
+header.has-logo{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;height:auto;padding:var(--logo-mt,20px) var(--logo-mx,24px) 14px;position:relative}
+header.has-logo img.blason{width:100%;height:auto;max-height:var(--logo-maxh,150px);object-fit:contain;object-position:var(--logo-pos,center)}
+header.has-logo>div{text-align:var(--logo-align,center)}
+header.has-logo strong:empty{display:none}
+header.has-logo span{margin-top:0}
+.tpl .tbrand strong:empty{display:none}.tpl .tbrand:has(img:not([hidden])):has(strong:empty){padding:6px}
+.tpl .tbrand img{width:auto;max-width:180px;height:38px;border-radius:6px}
+@media(min-width:701px){
+  #sidebar,:root[data-style=patrimoine] #sidebar,.tpl:not([data-style=patrimoine]) #sidebar{width:var(--sidew)}
+  #routePanel,.tpl #routePanel,:root[data-style=patrimoine] #routePanel{position:fixed;left:0;top:0;bottom:0;width:var(--sidew);max-width:100%;max-height:none;min-height:0;border-radius:0;border:0;border-right:1px solid var(--line,#d9dfd3);box-shadow:none;z-index:1750;background:var(--paper);backdrop-filter:none}
+  #routePanel.min{bottom:auto}
+  body:has(#routePanel:not([hidden])) #sidebar{z-index:0} /* #map isole ses calques : le panneau d'itinéraire passe devant le panneau gauche */
+  :root:not(.tpl) h1{font-size:clamp(26px,2.3vw,41px);letter-spacing:-1.2px}
+  :root[data-style=patrimoine] #photoPopover{width:var(--sidew)}
+  .intro{max-width:none}
+}
+
+/* ---------- vignettes (16/11/2026) : marges et interligne réduits ; petite vignette au survol (titre + photos), agrandir / réduire ---------- */
+#photoPopover{padding:14px 14px 12px}
+#photoPopover h2{margin:4px 64px 8px 0;line-height:1.18}
+#photoText{line-height:1.5;margin-top:8px}
+#photoText .credits{margin-top:5px}
+.tpl #photoPopover h2{margin:4px 72px 8px 0}
+.pop-size{position:absolute;right:46px;top:10px;width:30px;height:30px;border:0;border-radius:50%;background:#e9ecdf;color:inherit;display:grid;place-items:center;padding:0;z-index:2}
+.tpl .pop-size{width:36px;height:36px;right:54px;background:color-mix(in srgb,var(--paper) 88%,transparent);color:var(--ink)}
+:root[data-style=patrimoine] .pop-size{top:14px;right:58px}
+#photoPopover.compact{width:270px;max-height:min(360px,calc(100% - 90px))}
+#photoPopover.compact h2{font-size:17px;margin:2px 64px 6px 0}
+#photoPopover.compact #photoGrid.single img,#photoPopover.compact #photoGrid .gallery img.card-photo{height:140px}
+#photoPopover.compact #photoGrid .g-nav{height:140px}
+#photoPopover.compact #photoText{margin-top:4px}
+/* templates à fiche fixe : la petite vignette flotte près du lieu, comme dans Essentiel */
+:root.tpl #photoPopover.compact{position:absolute;right:auto;bottom:auto;width:270px;max-width:calc(100% - 24px);max-height:min(360px,calc(100% - 90px));border:1px solid var(--line);border-radius:min(var(--r),16px);box-shadow:0 14px 40px rgba(0,0,0,.18);padding:10px 10px 10px}
+:root.tpl #photoPopover.compact>:not(#photoGrid):not(#closePhotos):not(.pop-size){margin-left:4px;margin-right:4px}
+:root[data-style=atelier] #photoPopover.compact h2,:root[data-style=patrimoine] #photoPopover.compact h2{font-size:19px}
+@media(max-width:700px){:root.tpl #photoPopover.compact,#photoPopover.compact{left:10px!important;right:10px;top:auto!important;bottom:10px;width:auto}}
 </style>
 </head>
 <body>
@@ -744,13 +783,13 @@ body.edit .pin{cursor:move}
   <button class="tp-open" id="tpOpen" type="button" hidden aria-label="Afficher le panneau de l’heure et de la musique"><span>☀</span> <b id="tpOpenTime">15:00</b> <span class="tp-sep">·</span> <span>♪</span> <span class="tp-up">▴</span></button>
   <div class="hint">Glisser pour tourner <i>·</i> Molette pour zoomer <i>·</i> Clic droit pour déplacer</div>
   <div class="map-footer"><span id="buildingCount">Données géographiques en chargement</span><button id="dataInfo">À propos des données ↗</button></div>
-  <section id="photoPopover" role="dialog" aria-label="Photos du lieu" hidden><button id="closePhotos" aria-label="Fermer les photos">×</button><div class="detail-kicker" id="photoKicker">EN IMAGES</div><h2 id="photoTitle"></h2><div id="photoGrid"></div><div id="photoText"></div></section>
+  <section id="photoPopover" role="dialog" aria-label="Photos du lieu" hidden><button id="closePhotos" aria-label="Fermer les photos">×</button><button id="popGrow" class="pop-size" type="button" aria-label="Agrandir la vignette" title="Agrandir" hidden><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8.5 1.5h4v4M12.5 1.5 8 6M5.5 12.5h-4v-4M1.5 12.5 6 8"/></svg></button><button id="popShrink" class="pop-size" type="button" aria-label="Réduire la vignette" title="Réduire" hidden><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12.5 5.5h-4v-4M8.5 5.5 13 1M1.5 8.5h4v4M5.5 8.5 1 13"/></svg></button><div class="detail-kicker" id="photoKicker">EN IMAGES</div><h2 id="photoTitle"></h2><div id="photoGrid"></div><div id="photoText"></div></section>
   <div id="loading"><div class="loading-symbol" id="loadingSymbol">·</div><h2 id="loadingTitle">La commune prend du relief.</h2><p>Préparation de votre promenade…</p></div>
 </main>
 <dialog id="about"><button id="closeAbout" aria-label="Fermer">×</button><div class="eyebrow"><span></span> UNE MAQUETTE, UN VRAI TERRITOIRE</div><h2>Les coulisses de la carte</h2>
 <p>Relief : IGN RGE ALTI®. Bâtiments, routes, cours d’eau, forêts et limites : IGN BD TOPO® et Admin Express. Les teintes du sol sont une interprétation pastel des orthophotographies IGN BD ORTHO®. Données publiées sous Licence Ouverte Etalab 2.0. Les hauteurs des bâtiments sont celles mesurées par l’IGN ; toitures, fenêtres, arbres, oiseaux et nuages sont des interprétations.</p>
 <p id="aboutExtra"></p>
 <p class="made">Conception : <a href="https://antemic.fr" target="_blank" rel="noopener">ANTEMIC</a>, studio 3D, Clermont-Ferrand.</p></dialog>
-<script src="app.js?v=mwf9ud6d"></script>
+<script src="app.js?v=mwjwiraw"></script>
 </body>
 </html>

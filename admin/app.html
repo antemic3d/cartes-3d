@@ -99,6 +99,25 @@ input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color])
 input::placeholder,textarea::placeholder{color:#777!important;-webkit-text-fill-color:#777}
 select option,select optgroup{background:#fff;color:#000}
 input:disabled,select:disabled,textarea:disabled{background:#eee!important;color:#555!important;-webkit-text-fill-color:#555}
+/* lieux créés et placés par la commune (16/11/2026) : carte de placement, catégories, icônes */
+.addbtn{width:100%;margin-bottom:10px}
+.mm{position:relative;height:280px;overflow:auto;border-radius:10px;border:1px solid var(--line);background:#cfd6cb;cursor:crosshair}
+.mmz{position:relative;width:calc(100% * var(--z,1));min-width:100%}
+.mmz img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.mmz .dot{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff;border:1.5px solid #333;opacity:.75;pointer-events:none}
+.mmz .pin{position:absolute;width:26px;height:26px;margin:-26px 0 0 -13px;pointer-events:none;filter:drop-shadow(0 2px 3px #0008)}
+.mmz .pin:before{content:'';position:absolute;inset:0;background:var(--red);border:2px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+.mmtools{display:flex;gap:6px;align-items:center;margin-top:6px}.mmtools button{padding:4px 10px}
+.tag2{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;background:#173a2b;color:#7fe0b0;margin-left:6px;vertical-align:middle}
+.ic{width:26px;height:26px;display:grid;place-items:center;background:#f3f3f3;color:#333;border-radius:5px;font-size:15px;flex:none}
+.local .top .brand,.local .top .sep,.local #staffTag,.local #commune,.local #dlEditor,.local #logout,.local #viewLink{display:none!important}
+.local .demotag{display:inline-block}
+/* démo dans l'éditeur (cadre de 700 à 1100 px) : liste et fiche côte à côte, aperçu de la vignette sous la fiche */
+.local #app{grid-template-columns:270px minmax(0,1fr)}
+.local #list,.local #main{max-height:calc(100dvh - 52px)}
+.local #form{grid-template-columns:1fr;padding:18px 20px;gap:16px}
+.local .card{position:static}
+.local .row{grid-template-columns:1fr 1.4fr}
 </style>
 </head>
 <body>
@@ -125,7 +144,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
 <section id="app" hidden>
   <nav id="list">
     <div class="tabs" role="tablist"><button type="button" data-p="pLieux" aria-selected="true">Lieux</button><button type="button" data-p="pOpts" aria-selected="false">Réglages de la carte</button></div>
-    <div class="pane" id="pLieux"><select id="fComm" hidden aria-label="Commune" style="width:100%;margin-bottom:8px"></select><input id="filter" type="search" placeholder="Rechercher un lieu…" aria-label="Rechercher un lieu"><div id="items"></div></div>
+    <div class="pane" id="pLieux"><button type="button" class="btn addbtn" id="addPoi">＋ Nouveau lieu</button><select id="fComm" hidden aria-label="Commune" style="width:100%;margin-bottom:8px"></select><input id="filter" type="search" placeholder="Rechercher un lieu…" aria-label="Rechercher un lieu"><div id="items"></div></div>
     <div class="pane" id="pOpts" hidden><div id="opts">
       <div class="group"><b>Affichage</b>
         <label class="opt"><input type="checkbox" id="oTime"> Heure du jour (jour / nuit)</label>
@@ -139,15 +158,22 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
         <label class="opt"><input type="radio" name="oOrd" value="optimise"> Ordre le plus rapide</label>
         <label class="opt"><input type="radio" name="oOrd" value="ordre"> Respecter l’ordre choisi</label>
         <label class="opt"><input type="checkbox" id="oPick"> Ajout des étapes par clic sur la carte</label></div>
-      <div id="optIcons" class="group" hidden><b>Icônes</b><div id="iconList"></div></div>
+      <div id="optIcons" class="group"><b>Icônes des catégories</b>
+        <label class="opt"><input type="radio" name="oIcSet" value="antemic"> Icônes ANTEMIC</label>
+        <label class="opt"><input type="radio" name="oIcSet" value="custom"> Nos propres icônes (une image par catégorie)</label>
+        <div id="iconList"></div><p class="hint" id="iconHint">PNG ou WebP carrés, 128 px conseillés. Catégorie sans image : icône ANTEMIC.</p></div>
       <span id="optMsg" class="hint">Chaque réglage est enregistré dès qu’il est modifié.</span></div></div>
   </nav>
   <div id="main">
   <div id="none" class="empty"><div><b style="display:block;color:var(--text);font-size:17px;margin-bottom:6px">Choisissez un lieu</b>dans la liste de gauche pour modifier sa vignette.</div></div>
   <form id="form" hidden>
     <div class="col">
-    <h2 id="fTitle"></h2><p class="hint">Les changements sont visibles sur la carte dès l’enregistrement. La position et le modèle 3D des lieux sont gérés par ANTEMIC.</p>
+    <h2 id="fTitle"></h2><p class="hint" id="fHint">Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.</p>
     <label for="title">Titre de la vignette</label><input id="title" type="text" maxlength="120" required>
+    <label for="cat">Catégorie (définit l’icône)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select>
+    <label>Position sur la carte</label>
+    <div class="mm" id="mm"><div class="mmz" id="mmz"><img id="mmImg" alt="Plan de la commune"><span class="pin" id="mmPin" hidden></span></div></div>
+    <div class="mmtools"><button type="button" class="btn ghost" id="mmIn" title="Zoomer">＋</button><button type="button" class="btn ghost" id="mmOut" title="Dézoomer">－</button><button type="button" class="btn ghost" id="mmReset" title="Revenir à la position enregistrée">↺</button><span class="hint" id="mmHint">Cliquez sur le plan pour placer ou déplacer le lieu.</span></div>
     <label>Photos <span id="photoCount" class="hint"></span></label>
     <div class="gal" id="gal"></div>
     <div class="drop"><span>＋</span><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" multiple></div>
@@ -155,7 +181,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <label for="text">Texte</label><textarea id="text" maxlength="4000"></textarea><div class="count" id="textCount"></div>
     <div class="row"><div><label for="bLabel">Libellé du bouton</label><input id="bLabel" type="text" maxlength="40" placeholder="En savoir plus"></div>
     <div><label for="bUrl">Lien du bouton (vide = pas de bouton)</label><input id="bUrl" type="text" placeholder="www.exemple.fr"></div></div>
-    <div class="actions"><button class="btn big" id="save" type="submit">Enregistrer</button><button class="btn ghost" id="reset" type="button">Annuler les modifications</button><span id="saveMsg" class="hint"></span></div>
+    <div class="actions"><button class="btn big" id="save" type="submit">Enregistrer</button><button class="btn ghost" id="reset" type="button">Annuler les modifications</button><button class="btn ghost" id="delPoi" type="button" hidden style="border-color:#7a2a3a;color:#ff9aac">Supprimer ce lieu</button><span id="saveMsg" class="hint"></span></div>
     </div>
     <div class="side"><p class="k0">Aperçu de la vignette</p>
     <div class="card" aria-label="Aperçu de la vignette"><div class="k" id="pvK"></div><h3 id="pvT"></h3><img id="pvI" alt="" hidden><p id="pvP"></p><a id="pvA" target="_blank" rel="noopener" hidden></a></div></div>
@@ -176,7 +202,21 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   const DFILES = (() => { if (!DEMO) return null; try { return JSON.parse(sessionStorage.getItem('antemic-files-' + DEMO) || 'null'); } catch (e) { return null; } })();
   const DCODE = (() => { if (!DEMO) return ''; try { return sessionStorage.getItem('antemic-demo-code-' + DEMO) || ''; } catch (e) { return ''; } })();
   const cfile = (slug, f) => (DEMO && slug === DEMO && DFILES && DFILES[f]) || SITE + 'clients/' + slug + '/' + f;
-  const notify = (what) => { if (DEMO && parent !== window) try { parent.postMessage({ antemic: 'admin-saved', what }, location.origin); } catch (e) {} };
+  // démonstration dans l'éditeur (onglet « Espace commune » des cartes de démo) : ?local=<slug>, servi par l'éditeur (localhost) ;
+  // lecture et écriture de la carte de démo par l'éditeur (config.json), sans Supabase ni code d'accès
+  const LOCAL = (() => { const q = (new URLSearchParams(location.search).get('local') || '').replace(/[^a-z0-9-]/gi, '').toLowerCase(); return q && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? q : ''; })();
+  const API = '/api/clients/' + LOCAL;
+  const notify = (what) => { if ((DEMO || LOCAL) && parent !== window) try { parent.postMessage({ antemic: 'admin-saved', what }, location.origin); } catch (e) {} };
+  // catégories : liste figée (copie de viewer/src/categories.js, à garder identique)
+  const CATS = [['dec', 'Patrimoine', '✦'], ['rel', 'Édifice religieux', '♜'], ['cim', 'Cimetière', '✝'], ['pub', 'Service public', '⚑'], ['hot', 'Hôtellerie', '⌂'], ['res', 'Restauration', '☕'], ['park', 'Parking', 'P'], ['sport', 'Sport', '◉'], ['sante', 'Santé', '✚'], ['dae', 'DAE (défibrillateur)', '♥'], ['com', 'Commerce et services', '◈'], ['trans', 'Transport', '⇄'], ['edu', 'Éducation', '✎'], ['vue', 'Point de vue', '◬'], ['nat', 'Nature et paysage', '❀']].map(([id, label, icon]) => ({ id, label, icon }));
+  const catLabel = (id) => (CATS.find(c => c.id === id) || {}).label || '';
+  // éditeur local : la carte de démo est lue et réécrite en entier (PUT) à chaque enregistrement
+  const L = {
+    async cfg() { const r = await fetch(API, { cache: 'no-cache' }); if (!r.ok) throw new Error('Carte introuvable dans l’éditeur (' + r.status + ').'); return (await r.json()).config; },
+    async save(mut) { const c = await L.cfg(); const out = mut(c); const r = await fetch(API, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }); if (!r.ok) throw new Error('Enregistrement refusé par l’éditeur (' + r.status + ').'); S.cfg = c; return out; },
+    async upload(blob, rel) { const r = await fetch(API + '/upload?path=' + encodeURIComponent(rel), { method: 'POST', body: blob }); if (!r.ok) throw new Error('Envoi refusé (' + r.status + ').'); return rel; },
+    row(p) { const g = p.photos && p.photos.length ? p.photos : p.photo && p.photo.url ? [p.photo] : []; return { poi_id: p.id, title: p.title || '', text: p.text || '', photo_url: (g[0] || {}).url || '', photos: g.map(q => ({ url: q.url, credit: q.credit || '' })), button_label: (p.button || {}).label || 'En savoir plus', button_url: (p.button || {}).url || '', place: null, origin: p.byCommune ? 'commune' : 'editeur', updated_by: 'editeur' }; }
+  };
   const fresh = async () => { if (DEMO && DCODE && Date.now() > (S.exp || 0)) await login(DCODE); }; // jeton d'une heure : reconnexion silencieuse en démo
   const slugFromCode = c => c.trim().toUpperCase().split('-').slice(0, -2).join('-').toLowerCase();
   const sb = () => S.sbc || S.cfg.supabase;
@@ -223,37 +263,52 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   function theme() {
     const th = S.cfg.theme || {}; const r = document.documentElement.style;
     if (th.primary) r.setProperty('--primary', th.primary); if (th.accent) r.setProperty('--accent', th.accent);
-    $('#cname').textContent = DEMO ? String(S.cfg.name || '').replace(/ \(démo\)$/, '') : S.cfg.name; $('#logo').hidden = true; if (th.logo) { const l = $('#logo'); l.src = /^https?:/.test(th.logo) ? th.logo : cfile(S.slug, th.logo); l.hidden = false; }
-    const v = $('#viewLink'); v.href = SITE + '?c=' + S.slug; v.hidden = !!DEMO; $('#logout').hidden = !!DEMO;
+    $('#cname').textContent = DEMO || LOCAL ? String(S.cfg.name || '').replace(/ \(démo\)$/, '') : S.cfg.name; $('#logo').hidden = true; if (th.logo) { const l = $('#logo'); l.src = /^https?:/.test(th.logo) ? th.logo : cfile(S.slug, th.logo); l.hidden = false; }
+    const v = $('#viewLink'); v.href = SITE + '?c=' + S.slug; v.hidden = !!(DEMO || LOCAL); $('#logout').hidden = !!(DEMO || LOCAL);
   }
   const photoUrl = u => !u ? '' : /^(https?:|data:)/.test(u) ? u : cfile(S.slug, u);
   // options d'affichage : null en base = valeur définie par ANTEMIC (config publiée)
   const LIC = (id) => !!(S.cfg.licenses?.[id]?.active ?? (id === 'itinerary' ? S.cfg.modules?.itinerary : false));
   async function loadOpts() {
     const mod = Object.assign({ time: true, sun: true, music: true }, S.cfg.modules || {});
-    let row = null; try { const r = await fetch(sb().url + '/rest/v1/client_options?client_id=eq.' + encodeURIComponent(S.slug) + '&select=*', { headers: H() }); if (r.ok) row = (await r.json())[0] || null; } catch (e) {}
+    let row = null;
+    if (!LOCAL) try { const r = await fetch(sb().url + '/rest/v1/client_options?client_id=eq.' + encodeURIComponent(S.slug) + '&select=*', { headers: H() }); if (r.ok) row = (await r.json())[0] || null; } catch (e) {}
     $('#oTime').checked = row?.show_time ?? mod.time; $('#oSun').checked = row?.show_sun ?? mod.sun; $('#oMusic').checked = row?.show_music ?? mod.music;
-    // heure à l'ouverture (11/11) : client_options.start_hour ; null = réglage ANTEMIC (config.startHour, 10:00 par défaut)
-    S.hourDef = Number.isFinite(S.cfg.startHour) ? S.cfg.startHour : 10; S.hour = row?.start_hour ?? null; showHour();
+    // heure à l'ouverture (11/11) : client_options.start_hour ; null = réglage ANTEMIC (config.startHour, 10:00 par défaut) ; démo locale : config.startHour
+    if (LOCAL) { S.hourDef = 10; S.hour = Number.isFinite(S.cfg.startHour) ? S.cfg.startHour : null; }
+    else { S.hourDef = Number.isFinite(S.cfg.startHour) ? S.cfg.startHour : 10; S.hour = row?.start_hour ?? null; }
+    showHour();
     // options acquises : leurs réglages apparaissent ici
     S.itin = Object.assign({ speed: 1, order: 'optimise', pickOnMap: true }, S.cfg.itinerary || {}, row?.itinerary || {});
     $('#optItin').hidden = !LIC('itinerary');
     $('#oSpeed').value = S.itin.speed; $('#oSpeedV').textContent = '× ' + S.itin.speed; document.querySelectorAll('[name=oOrd]').forEach(r => r.checked = r.value === S.itin.order); $('#oPick').checked = S.itin.pickOnMap;
-    S.icons = { cat: { ...(S.cfg.icons?.cat || {}), ...(row?.icons?.cat || {}) }, poi: { ...(row?.icons?.poi || {}) } };
-    $('#optIcons').hidden = !(LIC('customIcons') && S.cfg.icons?.enabled); drawIcons();
+    // icônes des catégories (inclus, 16/11/2026) : jeu ANTEMIC ou icônes de la commune ; choix de la commune prioritaire
+    const ci = S.cfg.icons || {}; const ri = row?.icons || {};
+    S.icons = { mode: ri.mode || ci.mode || (ci.enabled ? 'custom' : 'antemic'), cat: { ...(ci.cat || {}), ...(ri.cat || {}) } };
+    drawIcons();
   }
   function drawIcons() {
-    const box = $('#iconList'); box.innerHTML = '';
-    for (const c of S.cfg.categories || []) {
+    document.querySelectorAll('[name=oIcSet]').forEach(r => { r.checked = r.value === S.icons.mode; });
+    const box = $('#iconList'); box.innerHTML = ''; const mine = S.icons.mode === 'custom'; $('#iconHint').hidden = !mine; if (!mine) return;
+    for (const c of CATS) {
       const lab = document.createElement('label'); lab.className = 'opt'; const u = S.icons.cat[c.id];
-      const im = document.createElement('img'); im.style.cssText = 'width:26px;height:26px;object-fit:contain;background:#f3f3f3;border-radius:5px'; if (u) im.src = photoUrl(u); else im.style.visibility = 'hidden';
+      let im; if (u) { im = document.createElement('img'); im.style.cssText = 'width:26px;height:26px;object-fit:contain;background:#f3f3f3;border-radius:5px'; im.src = photoUrl(u); } else { im = document.createElement('span'); im.className = 'ic'; im.textContent = c.icon; }
       const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/png,image/webp'; f.style.cssText = 'width:120px;font-size:10px;padding:2px';
-      f.onchange = async () => { const fl = f.files[0]; if (!fl) return; $('#optMsg').textContent = 'Envoi…'; await fresh(); const name = `${S.slug}/icons/cat-${c.id}-${Date.now()}.${fl.type === 'image/webp' ? 'webp' : 'png'}`;
-        const up = await fetch(`${sb().url}/storage/v1/object/photos/${name}`, { method: 'POST', headers: { ...H(), 'Content-Type': fl.type }, body: fl });
-        if (!up.ok) { $('#optMsg').textContent = 'Envoi refusé (' + up.status + ')'; return; } S.icons.cat[c.id] = `${sb().url}/storage/v1/object/public/photos/${name}`; drawIcons(); saveOpts(); };
-      const t = document.createElement('span'); t.textContent = c.label; t.style.flex = '1'; lab.append(im, t, f); box.append(lab);
+      f.onchange = async () => { const fl = f.files[0]; if (!fl) return; $('#optMsg').textContent = 'Envoi…'; const ext = fl.type === 'image/webp' ? 'webp' : 'png';
+        try {
+          if (LOCAL) S.icons.cat[c.id] = await L.upload(fl, `icons/cat-${c.id}-${Date.now()}.${ext}`);
+          else { await fresh(); const name = `${S.slug}/icons/cat-${c.id}-${Date.now()}.${ext}`;
+            const up = await fetch(`${sb().url}/storage/v1/object/photos/${name}`, { method: 'POST', headers: { ...H(), 'Content-Type': fl.type }, body: fl });
+            if (!up.ok) throw new Error('Envoi refusé (' + up.status + ')'); S.icons.cat[c.id] = `${sb().url}/storage/v1/object/public/photos/${name}`; }
+          drawIcons(); saveOpts();
+        } catch (e) { $('#optMsg').textContent = e.message; } };
+      const t = document.createElement('span'); t.textContent = c.label; t.style.flex = '1';
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'btn ghost'; x.style.cssText = 'padding:2px 8px;font-size:11px'; x.textContent = '✕'; x.title = 'Revenir à l’icône ANTEMIC'; x.hidden = !u;
+      x.onclick = (e) => { e.preventDefault(); delete S.icons.cat[c.id]; drawIcons(); saveOpts(); };
+      lab.append(im, t, f, x); box.append(lab);
     }
   }
+  document.querySelectorAll('[name=oIcSet]').forEach(r => r.addEventListener('change', () => { S.icons.mode = r.value; drawIcons(); saveOpts(); }));
   $('#oSpeed').addEventListener('input', () => { $('#oSpeedV').textContent = '× ' + $('#oSpeed').value; });
   const hhmm = (x) => { const m = Math.round(x * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
   function showHour() { $('#oHour').value = hhmm(S.hour ?? S.hourDef); $('#oHourReset').hidden = S.hour == null; }
@@ -261,10 +316,18 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   $('#oHourReset').addEventListener('click', () => { S.hour = null; showHour(); saveOpts(); });
   async function saveOpts() {
     $('#optMsg').textContent = 'Enregistrement…';
-    try { await fresh();
+    const itin = { speed: +$('#oSpeed').value, order: document.querySelector('[name=oOrd]:checked')?.value || 'optimise', pickOnMap: $('#oPick').checked };
+    const icons = { mode: S.icons.mode, cat: S.icons.cat };
+    try {
+      if (LOCAL) {
+        await L.save(c => { c.modules = { ...(c.modules || {}), time: $('#oTime').checked, sun: $('#oSun').checked, music: $('#oMusic').checked };
+          if (S.hour == null) delete c.startHour; else c.startHour = S.hour; if (LIC('itinerary')) c.itinerary = { ...(c.itinerary || {}), ...itin };
+          c.icons = { ...(c.icons || {}), mode: icons.mode, enabled: icons.mode === 'custom', cat: icons.cat }; });
+        $('#optMsg').textContent = 'Enregistré : la carte de démonstration est mise à jour.'; notify('options'); return;
+      }
+      await fresh();
       const body = { client_id: S.slug, show_time: $('#oTime').checked, show_sun: $('#oSun').checked, show_music: $('#oMusic').checked, updated_by: S.email || (S.slug + '@clients.antemic.fr'),
-        ...(LIC('itinerary') ? { itinerary: { speed: +$('#oSpeed').value, order: document.querySelector('[name=oOrd]:checked')?.value || 'optimise', pickOnMap: $('#oPick').checked } } : {}),
-        ...(LIC('customIcons') && S.cfg.icons?.enabled ? { icons: S.icons } : {}) };
+        ...(LIC('itinerary') ? { itinerary: itin } : {}), icons };
       const put = (b) => fetch(sb().url + '/rest/v1/client_options?on_conflict=client_id', { method: 'POST', headers: { ...H(true), Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(b) });
       let r = await put({ ...body, start_hour: S.hour });
       if (r.status === 400) r = await put(body); // colonne start_hour absente (schema.sql pas relancé) : les autres réglages passent quand même
@@ -283,6 +346,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   async function load() {
     loadOpts();
     communeMode();
+    if (LOCAL) { S.rows = (S.cfg.pois || []).map(L.row); communeSelect(); renderList(); return; }
     const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + (S.insee ? '&insee=eq.' + encodeURIComponent(S.insee) : '') + '&select=*&order=title', { headers: H() });
     if (!r.ok) throw new Error('Lecture impossible (' + r.status + ')');
     S.rows = await r.json(); await guessInsee(); communeSelect(); renderList();
@@ -323,19 +387,69 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       if (agg && S.fComm && rowInsee(row) !== S.fComm) continue; shown++;
       const b = document.createElement('button'); b.type = 'button'; b.className = 'item' + (S.cur?.poi_id === row.poi_id ? ' on' : '');
       const im = row.photo_url ? Object.assign(document.createElement('img'), { src: photoUrl(row.photo_url), alt: '' }) : Object.assign(document.createElement('span'), { className: 'ph' });
-      const t = document.createElement('span'); const bb = document.createElement('b'); bb.textContent = row.title; const sm = document.createElement('small'); sm.textContent = cats[base[row.poi_id]?.cat] || '';
+      const t = document.createElement('span'); const bb = document.createElement('b'); bb.textContent = row.title; const sm = document.createElement('small'); sm.textContent = catLabel(placeOf(row)?.cat) || cats[base[row.poi_id]?.cat] || '';
+      if (row.origin === 'commune') { const tg = document.createElement('span'); tg.className = 'tag2'; tg.textContent = 'ajouté'; bb.append(tg); }
       t.append(bb, sm); b.append(im, t); b.onclick = () => edit(row); box.append(b);
     }
     if (agg && !shown) box.append(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'Aucun lieu pour cette commune.' }));
   }
+  // position et catégorie d'un lieu : choix de la commune (place), sinon carte publiée par ANTEMIC
+  const baseOf = (row) => (S.cfg.pois || []).find(p => p.id === row.poi_id);
+  function placeOf(row) {
+    const b = baseOf(row);
+    if (row.place && Number.isFinite(+row.place.x) && Number.isFinite(+row.place.y)) return { x: +row.place.x, y: +row.place.y, cat: row.place.cat || b?.cat || 'com' };
+    return b && Number.isFinite(b.x) ? { x: b.x, y: b.y, cat: CATS.some(c => c.id === b.cat) ? b.cat : 'com' } : null;
+  }
+  { const sel = $('#cat'); for (const c of CATS) sel.append(new Option(`${c.icon}  ${c.label}`, c.id)); sel.addEventListener('change', () => preview()); }
   function edit(row) {
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
-    $('#fTitle').textContent = row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
+    $('#fTitle').textContent = row.isNew ? 'Nouveau lieu' : row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
     $('#bLabel').value = row.button_label || ''; $('#bUrl').value = row.button_url || ''; $('#photoFile').value = '';
-    $('#saveMsg').textContent = ''; drawGal(); preview();
+    S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com';
+    $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
+    $('#fHint').textContent = row.isNew ? 'Nouveau lieu : placez-le sur le plan, choisissez sa catégorie, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
+    $('#saveMsg').textContent = ''; drawGal(); drawMM(true); preview();
   }
+  // ---- plan de placement : orthophoto (ou texture du sol) de la carte, emprise config.mapBox { box: [x0, y0, x1, y1], image }
+  S.z = 1;
+  function drawMM(center) {
+    const mb = S.cfg.mapBox, mm = $('#mm'), img = $('#mmImg'), pin = $('#mmPin');
+    const ok = !!(mb && mb.box && mb.box.length === 4); mm.hidden = !ok; $('#mmIn').hidden = $('#mmOut').hidden = $('#mmReset').hidden = !ok;
+    if (!ok) { $('#mmHint').textContent = 'Plan de placement indisponible pour cette carte : demandez à ANTEMIC de la republier.'; return; }
+    $('#mmHint').textContent = 'Cliquez sur le plan pour placer ou déplacer le lieu.';
+    const key = S.slug + '/' + mb.image; if (img.dataset.k !== key) { img.dataset.k = key; img.dataset.fb = ''; img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = cfile(S.slug, 'lc_base.png'); } }; img.src = cfile(S.slug, mb.image || 'lc_base.png'); }
+    $('#mmz').style.setProperty('--z', S.z);
+    const [x0, y0, x1, y1] = mb.box; const U = (x) => (x - x0) / (x1 - x0) * 100, V = (y) => (y1 - y) / (y1 - y0) * 100;
+    const z = $('#mmz'); z.querySelectorAll('.dot').forEach(d => d.remove());
+    for (const r of S.rows) { if (r === S.cur) continue; const q = placeOf(r); if (!q) continue; const d = document.createElement('i'); d.className = 'dot'; d.style.left = U(q.x) + '%'; d.style.top = V(q.y) + '%'; z.append(d); }
+    pin.hidden = !S.pos; if (S.pos) { pin.style.left = U(S.pos.x) + '%'; pin.style.top = V(S.pos.y) + '%'; }
+    if (center && S.pos) requestAnimationFrame(() => { mm.scrollLeft = U(S.pos.x) / 100 * z.offsetWidth - mm.clientWidth / 2; mm.scrollTop = V(S.pos.y) / 100 * z.offsetHeight - mm.clientHeight / 2; });
+  }
+  $('#mmz').addEventListener('click', (e) => {
+    const mb = S.cfg.mapBox; if (!mb || !S.cur) return; const r = $('#mmz').getBoundingClientRect(); const [x0, y0, x1, y1] = mb.box;
+    const u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height; if (u < 0 || u > 1 || v < 0 || v > 1) return;
+    S.pos = { x: Math.round((x0 + u * (x1 - x0)) * 10) / 10, y: Math.round((y1 - v * (y1 - y0)) * 10) / 10, cat: $('#cat').value }; drawMM(false);
+  });
+  const zoom = (k) => { S.z = Math.max(1, Math.min(16, S.z * k)); drawMM(true); };
+  $('#mmIn').onclick = () => zoom(2); $('#mmOut').onclick = () => zoom(0.5); $('#mmReset').onclick = () => { S.pos = S.pos0 ? { ...S.pos0 } : null; drawMM(true); };
+  // ---- nouveau lieu (créé par la commune) : au centre du plan, catégorie « Commerce et services » par défaut
+  $('#addPoi').onclick = () => {
+    const mb = S.cfg.mapBox; const c = mb ? { x: (mb.box[0] + mb.box[2]) / 2, y: (mb.box[1] + mb.box[3]) / 2 } : null;
+    const near = S.rows.map(placeOf).filter(Boolean); const ctr = near.length ? { x: near.reduce((t, q) => t + q.x, 0) / near.length, y: near.reduce((t, q) => t + q.y, 0) / near.length } : c;
+    edit({ poi_id: '', isNew: true, origin: 'commune', title: '', text: '', photos: [], photo_url: '', button_label: 'En savoir plus', button_url: '', place: ctr ? { x: Math.round(ctr.x), y: Math.round(ctr.y), cat: 'com' } : null });
+    $('#title').focus();
+  };
+  $('#delPoi').onclick = async () => {
+    const row = S.cur; if (!row || row.origin !== 'commune' || !confirm(`Supprimer « ${row.title} » de la carte ?`)) return;
+    try {
+      if (LOCAL) await L.save(c => { c.pois = (c.pois || []).filter(q => q.id !== row.poi_id); });
+      else { await fresh(); const r = await fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(row.poi_id)}`, { method: 'DELETE', headers: { ...H(), Prefer: 'return=minimal' } }); if (!r.ok) throw new Error('Suppression refusée (' + r.status + ').'); }
+      S.rows = S.rows.filter(r => r !== row); S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); notify('poi-del:' + row.poi_id);
+    } catch (e) { $('#saveMsg').textContent = e.message; }
+  };
   function preview() {
-    const base = (S.cfg.pois || []).find(p => p.id === S.cur.poi_id); const cat = (S.cfg.categories || []).find(c => c.id === base?.cat);
+    const base = (S.cfg.pois || []).find(p => p.id === S.cur.poi_id); const cat = CATS.find(c => c.id === $('#cat').value) || (S.cfg.categories || []).find(c => c.id === base?.cat);
+    if (S.pos) S.pos.cat = $('#cat').value;
     $('#pvK').textContent = (cat?.label || '').toUpperCase(); $('#pvT').textContent = $('#title').value;
     $('#pvP').textContent = $('#text').value; $('#textCount').textContent = $('#text').value.length + ' / 4000';
     const f = S.photos[0]; const src = f ? (f.preview || photoUrl(f.url)) : '';
@@ -368,25 +482,53 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     e.target.value = ''; drawGal(); preview();
   };
   $('#reset').onclick = () => edit(S.cur);
+  const newId = (t) => 'c-' + (String(t || 'lieu').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'lieu') + '-' + Date.now().toString(36);
   $('#form').onsubmit = async e => {
     e.preventDefault(); const btn = $('#save'); btn.disabled = true; $('#saveMsg').textContent = 'Enregistrement…';
     try {
-      await fresh(); if (Date.now() > S.exp) throw new Error('Session expirée : reconnectez-vous.');
+      const cur = S.cur, isNew = !!cur.isNew;
+      if (!$('#title').value.trim()) throw new Error('Indiquez un titre.');
+      if (isNew && !S.pos) throw new Error('Placez le lieu sur le plan.');
       let u = $('#bUrl').value.trim(); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); try { if (u) new URL(u); } catch { throw new Error('Lien du bouton invalide.'); } $('#bUrl').value = u;
+      const id = isNew ? newId($('#title').value) : cur.poi_id; const cat = $('#cat').value;
       const patch = { title: $('#title').value.trim(), text: $('#text').value, button_label: $('#bLabel').value.trim() || 'En savoir plus', button_url: u };
+      // position : envoyée si elle diffère de la carte publiée (sinon effacée) ; toujours pour un lieu créé par la commune
+      const b0 = baseOf(cur); const moved = S.pos && (!b0 || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== b0.cat);
+      const place = S.pos ? { x: S.pos.x, y: S.pos.y, cat } : null;
+      if (LOCAL) { // démo dans l'éditeur : photos dans le dossier de la carte, lieu écrit dans config.json
+        for (const [k, q] of S.photos.entries()) if (q.blob) { q.url = await L.upload(q.blob, `photos/${id}-${Date.now()}-${k}.jpg`); delete q.blob; }
+        const p = await L.save(c => { c.pois = c.pois || []; let p = c.pois.find(q => q.id === id);
+          if (!p) { p = { id, byCommune: true, source: 'Espace commune', photo: null, photos: [] }; c.pois.push(p); }
+          p.title = patch.title; p.text = patch.text; p.button = { label: patch.button_label, url: patch.button_url };
+          p.photos = S.photos.map(q => ({ url: q.url, alt: patch.title, credit: (q.credit || '').trim().slice(0, 200) })); p.photo = p.photos[0] || null;
+          if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; return p; });
+        const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur;
+        renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); return;
+      }
+      await fresh(); if (Date.now() > S.exp) throw new Error('Session expirée : reconnectez-vous.');
       for (const [k, q] of S.photos.entries()) if (q.blob) {
-        const name = `${S.slug}/${S.cur.poi_id}-${Date.now()}-${k}.jpg`;
+        const name = `${S.slug}/${id}-${Date.now()}-${k}.jpg`;
         const up = await fetch(`${sb().url}/storage/v1/object/photos/${name}`, { method: 'POST', headers: { ...H(), 'Content-Type': 'image/jpeg' }, body: q.blob });
         if (!up.ok) throw new Error('Envoi de la photo refusé (' + up.status + ').');
         q.url = `${sb().url}/storage/v1/object/public/photos/${name}`; delete q.blob;
       }
       patch.photos = S.photos.map(q => ({ url: q.url, credit: (q.credit || '').trim().slice(0, 200) })); patch.photo_url = patch.photos[0]?.url || '';
-      const send = (body) => fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(S.cur.poi_id)}`, { method: 'PATCH', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify(body) });
-      let r = await send(patch);
-      if (!r.ok && (r.status === 400 || r.status === 401 || r.status === 403) && /photos/.test(await r.clone().text())) { const { photos, ...p1 } = patch; r = await send(p1); if (r.ok) $('#saveMsg').dataset.warn = '1'; } // base sans galerie : 1 photo
+      let r;
+      if (isNew) { // lieu créé par la commune (schema.sql du 16/11/2026 : colonnes place, origin)
+        r = await fetch(`${sb().url}/rest/v1/pois`, { method: 'POST', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify({ client_id: S.slug, poi_id: id, ...(S.insee ? { insee: S.insee } : {}), ...patch, place, origin: 'commune', updated_by: S.email || (S.slug + '@clients.antemic.fr') }) });
+        if (!r.ok) throw new Error(r.status === 401 || r.status === 403 || r.status === 400 ? 'Ajout de lieux pas encore disponible pour cette carte (base à mettre à jour par ANTEMIC).' : 'Enregistrement refusé (' + r.status + ').');
+      } else {
+        const send = (body) => fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify(body) });
+        const full = { ...patch, ...(moved || cur.place ? { place: moved || cur.origin === 'commune' ? place : null } : {}) };
+        r = await send(full);
+        if (!r.ok && (r.status === 400 || r.status === 401 || r.status === 403)) { const txt = await r.clone().text();
+          if (/place/.test(txt) && 'place' in full) { const { place: _p, ...p1 } = full; r = await send(p1); if (r.ok) $('#saveMsg').dataset.warn = 'place'; }
+          else if (/photos/.test(txt)) { const { photos, ...p1 } = full; r = await send(p1); if (r.ok) $('#saveMsg').dataset.warn = '1'; } } // base sans galerie : 1 photo
+      }
       if (!r.ok) throw new Error('Enregistrement refusé (' + r.status + ').');
       const [row] = await r.json(); if (!row) throw new Error('Ce lieu ne peut pas être modifié avec ce code.');
-      Object.assign(S.cur, row); renderList(); edit(S.cur); $('#saveMsg').textContent = DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'; notify('poi:' + S.cur.poi_id);
+      if (isNew) { S.rows.push(row); S.cur = row; } else Object.assign(cur, row);
+      renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; notify('poi:' + id);
     } catch (err) { $('#saveMsg').textContent = err.message; } finally { btn.disabled = false; }
   };
   $('#filter').oninput = renderList;
@@ -437,6 +579,11 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       await enterTeam();
     } catch (err) { show($('#loginMsg'), err.message); }
   };
+  if (LOCAL) { // démonstration dans l'éditeur : pas de connexion, carte de démo lue par l'éditeur
+    document.documentElement.classList.add('demo', 'local'); $('#login').hidden = true;
+    (async () => { try { S.cfg = await L.cfg(); S.slug = LOCAL; S.email = 'demo@espace-commune'; S.exp = Infinity; theme(); $('#app').hidden = false; await load(); autoFirst(); }
+      catch (e) { $('#login').hidden = false; document.querySelector('.ltabs').hidden = true; $('#loginForm').hidden = true; show($('#loginMsg'), 'Espace commune de démonstration indisponible : ' + e.message); } })();
+  } else
   if (DEMO) { // démonstration : connexion automatique avec le code transmis par la page demo/
     document.documentElement.classList.add('demo');
     $('#login').hidden = true;
