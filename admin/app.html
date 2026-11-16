@@ -100,7 +100,7 @@ input::placeholder,textarea::placeholder{color:#777!important;-webkit-text-fill-
 select option,select optgroup{background:#fff;color:#000}
 input:disabled,select:disabled,textarea:disabled{background:#eee!important;color:#555!important;-webkit-text-fill-color:#555}
 /* lieux créés et placés par la commune (16/11/2026) : carte de placement, catégories, icônes */
-.addbtn{width:100%;margin-bottom:10px}
+.addbtn{width:100%;margin-bottom:10px;position:sticky;top:0;z-index:3;font-size:15px;padding:11px}
 .mm{position:relative;height:280px;overflow:auto;border-radius:10px;border:1px solid var(--line);background:#cfd6cb;cursor:crosshair}
 .mmz{position:relative;width:calc(100% * var(--z,1));min-width:100%}
 .mmz img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
@@ -158,19 +158,19 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
         <label class="opt"><input type="radio" name="oOrd" value="optimise"> Ordre le plus rapide</label>
         <label class="opt"><input type="radio" name="oOrd" value="ordre"> Respecter l’ordre choisi</label>
         <label class="opt"><input type="checkbox" id="oPick"> Ajout des étapes par clic sur la carte</label></div>
-      <div id="optIcons" class="group"><b>Icônes des catégories</b>
+      <div id="optIcons" class="group"><b>Icônes des lieux</b>
         <label class="opt"><input type="radio" name="oIcSet" value="antemic"> Icônes ANTEMIC</label>
-        <label class="opt"><input type="radio" name="oIcSet" value="custom"> Nos propres icônes (une image par catégorie)</label>
-        <div id="iconList"></div><p class="hint" id="iconHint">PNG ou WebP carrés, 128 px conseillés. Catégorie sans image : icône ANTEMIC.</p></div>
+        <label class="opt"><input type="radio" name="oIcSet" value="custom"> Nos propres icônes (une image par type d’icône)</label>
+        <div id="iconList"></div><p class="hint" id="iconHint">PNG ou WebP carrés, 128 px conseillés. Type sans image : icône ANTEMIC.</p></div>
       <span id="optMsg" class="hint">Chaque réglage est enregistré dès qu’il est modifié.</span></div></div>
   </nav>
   <div id="main">
-  <div id="none" class="empty"><div><b style="display:block;color:var(--text);font-size:17px;margin-bottom:6px">Choisissez un lieu</b>dans la liste de gauche pour modifier sa vignette.</div></div>
+  <div id="none" class="empty"><div><b style="display:block;color:var(--text);font-size:17px;margin-bottom:6px">Choisissez un lieu</b>dans la liste de gauche pour modifier sa vignette,<br>ou ajoutez-en un nouveau.<br><button type="button" class="btn big" id="addPoi2" style="margin-top:16px">＋ Créer un nouveau lieu</button></div></div>
   <form id="form" hidden>
     <div class="col">
     <h2 id="fTitle"></h2><p class="hint" id="fHint">Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.</p>
     <label for="title">Titre de la vignette</label><input id="title" type="text" maxlength="120" required>
-    <label for="cat">Catégorie (définit l’icône)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select>
+    <div class="row"><div><label for="cat">Catégorie (filtre de la carte)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div><div><label for="icon">Icône</label><select id="icon" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div></div>
     <label>Position sur la carte</label>
     <div class="mm" id="mm"><div class="mmz" id="mmz"><img id="mmImg" alt="Plan de la commune"><span class="pin" id="mmPin" hidden></span></div></div>
     <div class="mmtools"><button type="button" class="btn ghost" id="mmIn" title="Zoomer">＋</button><button type="button" class="btn ghost" id="mmOut" title="Dézoomer">－</button><button type="button" class="btn ghost" id="mmReset" title="Revenir à la position enregistrée">↺</button><span class="hint" id="mmHint">Cliquez sur le plan pour placer ou déplacer le lieu.</span></div>
@@ -208,7 +208,12 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   const API = '/api/clients/' + LOCAL;
   const notify = (what) => { if ((DEMO || LOCAL) && parent !== window) try { parent.postMessage({ antemic: 'admin-saved', what }, location.origin); } catch (e) {} };
   // catégories : liste figée (copie de viewer/src/categories.js, à garder identique)
-  const CATS = [['dec', 'Patrimoine', '✦'], ['rel', 'Édifice religieux', '♜'], ['cim', 'Cimetière', '✝'], ['pub', 'Service public', '⚑'], ['hot', 'Hôtellerie', '⌂'], ['res', 'Restauration', '☕'], ['park', 'Parking', 'P'], ['sport', 'Sport', '◉'], ['sante', 'Santé', '✚'], ['dae', 'DAE (défibrillateur)', '♥'], ['com', 'Commerce et services', '◈'], ['trans', 'Transport', '⇄'], ['edu', 'Éducation', '✎'], ['vue', 'Point de vue', '◬'], ['nat', 'Nature et paysage', '❀']].map(([id, label, icon]) => ({ id, label, icon }));
+  // 5 catégories de filtre (inchangées) et 15 types d'icône choisis lieu par lieu (copie de viewer/src/categories.js, à garder identique)
+  const CATS = [['pub', 'Bâtiments publics', '⌂'], ['com', 'Commerces & services', '◈'], ['res', 'Hébergement & restauration', '☕'], ['dec', 'Patrimoine', '✦'], ['nat', 'Paysages & nature', '❀']].map(([id, label, icon]) => ({ id, label, icon }));
+  const ICONS = [['dec', 'Patrimoine', '✦'], ['rel', 'Édifice religieux', '♜'], ['cim', 'Cimetière', '✝'], ['pub', 'Service public', '⚑'], ['hot', 'Hôtellerie', '⌂'], ['res', 'Restauration', '☕'], ['park', 'Parking', 'P'], ['sport', 'Sport', '◉'], ['sante', 'Santé', '✚'], ['dae', 'DAE (défibrillateur)', '♥'], ['com', 'Commerce et services', '◈'], ['trans', 'Transport', '⇄'], ['edu', 'Éducation', '✎'], ['vue', 'Point de vue', '◬'], ['nat', 'Nature et paysage', '❀']].map(([id, label, icon]) => ({ id, label, icon }));
+  const ICON_CAT = { dec: 'dec', rel: 'dec', cim: 'pub', pub: 'pub', hot: 'res', res: 'res', park: 'pub', sport: 'pub', sante: 'com', dae: 'pub', com: 'com', trans: 'pub', edu: 'pub', vue: 'nat', nat: 'nat' };
+  const iconOf = (p) => p && ICONS.some(c => c.id === p.iconType) ? p.iconType : p && ICONS.some(c => c.id === p.cat) ? p.cat : 'com';
+  const catOk = (id) => CATS.some(c => c.id === id) ? id : ICON_CAT[id] || 'com';
   const catLabel = (id) => (CATS.find(c => c.id === id) || {}).label || '';
   // éditeur local : la carte de démo est lue et réécrite en entier (PUT) à chaque enregistrement
   const L = {
@@ -290,7 +295,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   function drawIcons() {
     document.querySelectorAll('[name=oIcSet]').forEach(r => { r.checked = r.value === S.icons.mode; });
     const box = $('#iconList'); box.innerHTML = ''; const mine = S.icons.mode === 'custom'; $('#iconHint').hidden = !mine; if (!mine) return;
-    for (const c of CATS) {
+    for (const c of ICONS) {
       const lab = document.createElement('label'); lab.className = 'opt'; const u = S.icons.cat[c.id];
       let im; if (u) { im = document.createElement('img'); im.style.cssText = 'width:26px;height:26px;object-fit:contain;background:#f3f3f3;border-radius:5px'; im.src = photoUrl(u); } else { im = document.createElement('span'); im.className = 'ic'; im.textContent = c.icon; }
       const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/png,image/webp'; f.style.cssText = 'width:120px;font-size:10px;padding:2px';
@@ -397,15 +402,16 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   const baseOf = (row) => (S.cfg.pois || []).find(p => p.id === row.poi_id);
   function placeOf(row) {
     const b = baseOf(row);
-    if (row.place && Number.isFinite(+row.place.x) && Number.isFinite(+row.place.y)) return { x: +row.place.x, y: +row.place.y, cat: row.place.cat || b?.cat || 'com' };
-    return b && Number.isFinite(b.x) ? { x: b.x, y: b.y, cat: CATS.some(c => c.id === b.cat) ? b.cat : 'com' } : null;
+    if (row.place && Number.isFinite(+row.place.x) && Number.isFinite(+row.place.y)) return { x: +row.place.x, y: +row.place.y, cat: catOk(row.place.cat || b?.cat), icon: row.place.icon || iconOf(b) };
+    return b && Number.isFinite(b.x) ? { x: b.x, y: b.y, cat: catOk(b.cat), icon: iconOf(b) } : null;
   }
-  { const sel = $('#cat'); for (const c of CATS) sel.append(new Option(`${c.icon}  ${c.label}`, c.id)); sel.addEventListener('change', () => preview()); }
+  { const sel = $('#cat'); for (const c of CATS) sel.append(new Option(c.label, c.id)); sel.addEventListener('change', () => preview());
+    const ic = $('#icon'); for (const c of ICONS) ic.append(new Option(`${c.icon}  ${c.label}`, c.id)); ic.addEventListener('change', () => preview()); }
   function edit(row) {
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
     $('#fTitle').textContent = row.isNew ? 'Nouveau lieu' : row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
     $('#bLabel').value = row.button_label || ''; $('#bUrl').value = row.button_url || ''; $('#photoFile').value = '';
-    S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com';
+    S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com'; $('#icon').value = S.pos?.icon || 'com';
     $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
     $('#fHint').textContent = row.isNew ? 'Nouveau lieu : placez-le sur le plan, choisissez sa catégorie, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
     $('#saveMsg').textContent = ''; drawGal(); drawMM(true); preview();
@@ -428,7 +434,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   $('#mmz').addEventListener('click', (e) => {
     const mb = S.cfg.mapBox; if (!mb || !S.cur) return; const r = $('#mmz').getBoundingClientRect(); const [x0, y0, x1, y1] = mb.box;
     const u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height; if (u < 0 || u > 1 || v < 0 || v > 1) return;
-    S.pos = { x: Math.round((x0 + u * (x1 - x0)) * 10) / 10, y: Math.round((y1 - v * (y1 - y0)) * 10) / 10, cat: $('#cat').value }; drawMM(false);
+    S.pos = { x: Math.round((x0 + u * (x1 - x0)) * 10) / 10, y: Math.round((y1 - v * (y1 - y0)) * 10) / 10, cat: $('#cat').value, icon: $('#icon').value }; drawMM(false);
   });
   const zoom = (k) => { S.z = Math.max(1, Math.min(16, S.z * k)); drawMM(true); };
   $('#mmIn').onclick = () => zoom(2); $('#mmOut').onclick = () => zoom(0.5); $('#mmReset').onclick = () => { S.pos = S.pos0 ? { ...S.pos0 } : null; drawMM(true); };
@@ -436,9 +442,10 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   $('#addPoi').onclick = () => {
     const mb = S.cfg.mapBox; const c = mb ? { x: (mb.box[0] + mb.box[2]) / 2, y: (mb.box[1] + mb.box[3]) / 2 } : null;
     const near = S.rows.map(placeOf).filter(Boolean); const ctr = near.length ? { x: near.reduce((t, q) => t + q.x, 0) / near.length, y: near.reduce((t, q) => t + q.y, 0) / near.length } : c;
-    edit({ poi_id: '', isNew: true, origin: 'commune', title: '', text: '', photos: [], photo_url: '', button_label: 'En savoir plus', button_url: '', place: ctr ? { x: Math.round(ctr.x), y: Math.round(ctr.y), cat: 'com' } : null });
+    edit({ poi_id: '', isNew: true, origin: 'commune', title: '', text: '', photos: [], photo_url: '', button_label: 'En savoir plus', button_url: '', place: ctr ? { x: Math.round(ctr.x), y: Math.round(ctr.y), cat: 'com', icon: 'com' } : null });
     $('#title').focus();
   };
+  $('#addPoi2').onclick = () => $('#addPoi').click();
   $('#delPoi').onclick = async () => {
     const row = S.cur; if (!row || row.origin !== 'commune' || !confirm(`Supprimer « ${row.title} » de la carte ?`)) return;
     try {
@@ -449,7 +456,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   };
   function preview() {
     const base = (S.cfg.pois || []).find(p => p.id === S.cur.poi_id); const cat = CATS.find(c => c.id === $('#cat').value) || (S.cfg.categories || []).find(c => c.id === base?.cat);
-    if (S.pos) S.pos.cat = $('#cat').value;
+    if (S.pos) { S.pos.cat = $('#cat').value; S.pos.icon = $('#icon').value; }
     $('#pvK').textContent = (cat?.label || '').toUpperCase(); $('#pvT').textContent = $('#title').value;
     $('#pvP').textContent = $('#text').value; $('#textCount').textContent = $('#text').value.length + ' / 4000';
     const f = S.photos[0]; const src = f ? (f.preview || photoUrl(f.url)) : '';
@@ -490,18 +497,18 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       if (!$('#title').value.trim()) throw new Error('Indiquez un titre.');
       if (isNew && !S.pos) throw new Error('Placez le lieu sur le plan.');
       let u = $('#bUrl').value.trim(); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); try { if (u) new URL(u); } catch { throw new Error('Lien du bouton invalide.'); } $('#bUrl').value = u;
-      const id = isNew ? newId($('#title').value) : cur.poi_id; const cat = $('#cat').value;
+      const id = isNew ? newId($('#title').value) : cur.poi_id; const cat = $('#cat').value, icon = $('#icon').value;
       const patch = { title: $('#title').value.trim(), text: $('#text').value, button_label: $('#bLabel').value.trim() || 'En savoir plus', button_url: u };
       // position : envoyée si elle diffère de la carte publiée (sinon effacée) ; toujours pour un lieu créé par la commune
-      const b0 = baseOf(cur); const moved = S.pos && (!b0 || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== b0.cat);
-      const place = S.pos ? { x: S.pos.x, y: S.pos.y, cat } : null;
+      const b0 = baseOf(cur); const moved = S.pos && (!b0 || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== catOk(b0.cat) || icon !== iconOf(b0));
+      const place = S.pos ? { x: S.pos.x, y: S.pos.y, cat, icon } : null;
       if (LOCAL) { // démo dans l'éditeur : photos dans le dossier de la carte, lieu écrit dans config.json
         for (const [k, q] of S.photos.entries()) if (q.blob) { q.url = await L.upload(q.blob, `photos/${id}-${Date.now()}-${k}.jpg`); delete q.blob; }
         const p = await L.save(c => { c.pois = c.pois || []; let p = c.pois.find(q => q.id === id);
           if (!p) { p = { id, byCommune: true, source: 'Espace commune', photo: null, photos: [] }; c.pois.push(p); }
           p.title = patch.title; p.text = patch.text; p.button = { label: patch.button_label, url: patch.button_url };
           p.photos = S.photos.map(q => ({ url: q.url, alt: patch.title, credit: (q.credit || '').trim().slice(0, 200) })); p.photo = p.photos[0] || null;
-          if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; return p; });
+          if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; p.iconType = icon; return p; });
         const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur;
         renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); return;
       }
