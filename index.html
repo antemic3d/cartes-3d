@@ -248,8 +248,12 @@ footer small{font-size:7px;letter-spacing:1.7px;display:block;margin-top:8px;col
 #labels,#topo{pointer-events:none}
 .pin{position:absolute;top:0;left:0;pointer-events:auto;display:flex;align-items:center;gap:7px;border:1px solid #fff8;border-radius:7px;padding:7px 10px;background:color-mix(in srgb,var(--paper) 94%,transparent);box-shadow:0 4px 15px #26372b20;font-size:10px;font-weight:600;white-space:nowrap;transform-origin:bottom center;will-change:transform;color:var(--ink)}
 .pin:after{content:'';position:absolute;bottom:-8px;left:50%;height:8px;width:1px;background:#476c52}
-.pin span{color:var(--accent);font-size:13px;line-height:1}
-.cicon{width:18px;height:18px;object-fit:contain;display:block}.place-icon .cicon{width:22px;height:22px}
+.pin span{color:var(--accent);font-size:16px;line-height:1}
+/* icônes des catégories (viewer/icons) : SVG du jeu ANTEMIC ou icône de la commune en masque, toutes à la couleur du texte */
+.ic{width:1em;height:1em;display:block;fill:currentColor;flex:none}
+.cicon{width:1em;height:1em;display:block;flex:none;background:currentColor;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.place-icon .ic,.place-icon .cicon{width:22px;height:22px}
+.near .ic,.mini .ic,.near .cicon,.mini .cicon{display:inline-block;vertical-align:-.15em}
 .pin b{font-weight:600}
 .pin i{display:none}
 .pin:hover{background:#fff}
@@ -509,7 +513,7 @@ body.edit .pin{cursor:move}
 :root[data-style=patrimoine] .pin.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 :root[data-style=metropole] .pin{margin-top:-12px;background:rgba(20,22,28,.84);border:1px solid rgba(255,255,255,.14);border-radius:999px;box-shadow:0 4px 16px rgba(0,0,0,.35);padding:6px 12px 6px 10px;font-size:12px;font-weight:500;color:var(--ink);backdrop-filter:blur(8px)}
 :root[data-style=metropole] .pin span{font-size:0;width:7px;height:7px;flex:none;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc),0 0 2px var(--acc)}
-:root[data-style=metropole] .pin span img{display:none}
+:root[data-style=metropole] .pin span>*{display:none}
 :root[data-style=metropole] .pin:after{bottom:-12px;height:12px;background:rgba(255,255,255,.35)}
 :root[data-style=metropole] .pin:hover{background:rgba(32,35,44,.92)}
 :root[data-style=metropole] .pin.active{background:var(--acc);color:var(--btn-text);border-color:var(--acc)}
@@ -517,7 +521,7 @@ body.edit .pin{cursor:move}
 :root[data-style=metropole] .pin.cluster{background:rgba(20,22,28,.84)}
 :root[data-style=epure] .pin{margin-top:-24px;background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:999px;box-shadow:0 2px 8px rgba(29,36,32,.10);padding:5px 11px 5px 9px;font-size:12.5px;font-weight:500;gap:6px}
 :root[data-style=epure] .pin span{font-size:0;width:6px;height:6px;flex:none;border-radius:50%;background:var(--acc)}
-:root[data-style=epure] .pin span img{display:none}
+:root[data-style=epure] .pin span>*{display:none}
 :root[data-style=epure] .pin:after{bottom:-19px;height:18px;background:rgba(29,36,32,.55)}
 :root[data-style=epure] .pin:before{content:'';position:absolute;left:50%;bottom:-25px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 3px rgba(255,255,255,.9)}
 :root[data-style=epure] .pin.active{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -790,6 +794,6 @@ header.has-logo span{margin-top:0}
 <p>Relief : IGN RGE ALTI®. Bâtiments, routes, cours d’eau, forêts et limites : IGN BD TOPO® et Admin Express. Les teintes du sol sont une interprétation pastel des orthophotographies IGN BD ORTHO®. Données publiées sous Licence Ouverte Etalab 2.0. Les hauteurs des bâtiments sont celles mesurées par l’IGN ; toitures, fenêtres, arbres, oiseaux et nuages sont des interprétations.</p>
 <p id="aboutExtra"></p>
 <p class="made">Conception : <a href="https://antemic.fr" target="_blank" rel="noopener">ANTEMIC</a>, studio 3D, Clermont-Ferrand.</p></dialog>
-<script src="app.js?v=mwjwiraw"></script>
+<script src="app.js?v=mwjwx0tv"></script>
 </body>
 </html>
