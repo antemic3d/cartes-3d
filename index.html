@@ -723,6 +723,30 @@ header.has-logo span{margin-top:0}
   .route-hint{display:none!important}
   #routeOut{max-height:none}
 }
+
+/* ---------- 17/11/2026 : miniatures de la galerie sans barre de défilement (jusqu'à 6 photos et plus, largeur de la vignette inchangée) ---------- */
+.g-thumbs{overflow:hidden}
+.g-thumb{flex:1 1 0;min-width:0;max-width:46px;width:auto;height:auto;aspect-ratio:46/34}
+/* ---------- 17/11/2026 : smartphone : petite vignette au clic, deux fois plus petite ; touchée → plein écran ---------- */
+@media(max-width:700px){
+  :root.tpl #photoPopover.compact,#photoPopover.compact{max-height:min(180px,calc(100% - 90px));padding:7px 8px 6px;cursor:pointer}
+  #photoPopover.compact h2,:root.tpl #photoPopover.compact h2{font-size:14px;margin:0 70px 4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #photoPopover.compact .detail-kicker{font-size:9px;margin:0}
+  #photoPopover.compact #photoGrid{margin-bottom:0}
+  #photoPopover.compact #photoGrid.single img,#photoPopover.compact #photoGrid .gallery img.card-photo,:root.tpl #photoPopover.compact #photoGrid .gallery img.card-photo{height:70px}
+  #photoPopover.compact #photoGrid .g-nav{height:70px;pointer-events:none}
+  #photoPopover.compact .g-thumbs,#photoPopover.compact .credits,#photoPopover.compact #photoText{display:none}
+  #photoPopover.compact .pop-size,#photoPopover.compact #closePhotos{top:4px}
+  :root.tpl #photoPopover.mfull,#photoPopover.mfull{position:fixed;left:0!important;right:0;top:0!important;bottom:0;width:auto;max-width:none;max-height:none;height:100%;border-radius:0;border:0;z-index:3000;overflow:auto;padding:12px 14px 20px}
+  #photoPopover.mfull #photoGrid .gallery img.card-photo,#photoPopover.mfull #photoGrid.single img{height:min(52vh,320px)}
+  #photoPopover.mfull #photoGrid .g-nav{height:min(52vh,320px)}
+  /* itinéraire réduit pendant / après l'animation : petit résumé en bas, au-dessus des commandes des templates */
+  #routePanel.min,.tpl #routePanel.min{padding:6px 10px;border-radius:12px}
+  #routePanel.min #routeSum{font-size:12px;padding-right:70px;line-height:1.3}
+  #routePanel.min #routeSum small{font-size:10.5px}
+  #routePanel.min #closeRoute,#routePanel.min #routeMin{top:4px;width:28px;height:28px}
+  .tpl body:has(#routeHud:not([hidden])) #routePanel.min{bottom:80px}
+}
 </style>
 </head>
 <body>
@@ -820,6 +844,6 @@ header.has-logo span{margin-top:0}
 <p>Relief : IGN RGE ALTI®. Bâtiments, routes, cours d’eau, forêts et limites : IGN BD TOPO® et Admin Express. Les teintes du sol sont une interprétation pastel des orthophotographies IGN BD ORTHO®. Données publiées sous Licence Ouverte Etalab 2.0. Les hauteurs des bâtiments sont celles mesurées par l’IGN ; toitures, fenêtres, arbres, oiseaux et nuages sont des interprétations.</p>
 <p id="aboutExtra"></p>
 <p class="made">Conception : <a href="https://antemic.fr" target="_blank" rel="noopener">ANTEMIC</a>, studio 3D, Clermont-Ferrand.</p></dialog>
-<script src="app.js?v=mwkmps77"></script>
+<script src="app.js?v=mwkwjvfm"></script>
 </body>
 </html>
