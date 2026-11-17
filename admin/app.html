@@ -92,7 +92,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--red);width:16px;height
 .demo .top{min-height:52px;padding:6px 16px}
 .demotag{display:none;font-size:10.5px;padding:3px 9px;border-radius:99px;background:#3d1520;color:#ff9aac;font-weight:700;letter-spacing:.06em}
 .demo .demotag{display:inline-block}
-.demo #list,.demo #main{max-height:calc(100dvh - 52px)}
+.demo #list,.demo #main,.demo #pv{max-height:calc(100dvh - 52px)}
 
 /* champs de saisie : texte noir sur fond blanc partout (12/11) */
 input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]),select,textarea{background:#fff!important;color:#000!important;-webkit-text-fill-color:#000;caret-color:#000}
@@ -101,13 +101,21 @@ select option,select optgroup{background:#fff;color:#000}
 input:disabled,select:disabled,textarea:disabled{background:#eee!important;color:#555!important;-webkit-text-fill-color:#555}
 /* lieux créés et placés par la commune (16/11/2026) : carte de placement, catégories, icônes */
 .addbtn{width:100%;margin-bottom:10px;position:sticky;top:0;z-index:3;font-size:15px;padding:11px}
-.mm{position:relative;height:280px;overflow:auto;border-radius:10px;border:1px solid var(--line);background:#cfd6cb;cursor:crosshair}
-.mmz{position:relative;width:calc(100% * var(--z,1));min-width:100%}
-.mmz img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
-.mmz .dot{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#fff;border:1.5px solid #333;opacity:.75;pointer-events:none}
-.mmz .pin{position:absolute;width:26px;height:26px;margin:-26px 0 0 -13px;pointer-events:none;filter:drop-shadow(0 2px 3px #0008)}
-.mmz .pin:before{content:'';position:absolute;inset:0;background:var(--red);border:2px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
-.mmtools{display:flex;gap:6px;align-items:center;margin-top:6px}.mmtools button{padding:4px 10px}
+/* position des lieux sur l'aperçu 3D (17/11) : plan 2D retiré ; aperçu de la carte à droite, largeur réglable (séparateur) */
+.pos{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pos .st{font-size:13.5px;font-weight:600}.pos .st.no{color:var(--warn)}.pos .st.new{color:#7fe0b0}
+.picking #posPick{animation:pk 1.1s ease-in-out infinite;background:var(--red);color:#fff;border-color:var(--red)}@keyframes pk{50%{filter:brightness(1.35)}}
+.haspv #app{grid-template-columns:340px minmax(360px,1fr) 10px var(--pvw,42%)}
+#split{cursor:col-resize;background:var(--line);position:relative;touch-action:none}#split:hover,.dragging #split{background:var(--red)}
+#split:after{content:'';position:absolute;left:3px;right:3px;top:50%;height:44px;margin-top:-22px;border-left:2px dotted #fff8;border-right:2px dotted #fff8}
+#pv{display:flex;flex-direction:column;min-width:0;min-height:0;max-height:calc(100dvh - 60px);background:#120a16}
+#pv .pvh{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);flex:none}
+#pv .pvh b{flex:1;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+#pv .pvh .st{font-size:12.5px;color:#7fe0b0}
+#pv .fr{flex:1;position:relative}#pv iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#pvClose,#pvOpen{display:none}
+.dragging iframe{pointer-events:none}.dragging{cursor:col-resize;user-select:none}
+@media(max-width:1000px){.haspv #app{grid-template-columns:300px minmax(0,1fr)}#split{display:none}#pv{position:fixed;inset:0;z-index:40;max-height:none;display:none}.pvopen #pv,.picking #pv{display:flex}#pvClose{display:inline-flex}.haspv #pvOpen{display:inline-flex}}
+@media(max-width:800px){.haspv #app{grid-template-columns:1fr}}
 .tag2{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;background:#173a2b;color:#7fe0b0;margin-left:6px;vertical-align:middle}
 .ic{width:26px;height:26px;display:grid;place-items:center;background:#f3f3f3;color:#333;border-radius:5px;font-size:15px;flex:none}
 .local .top .brand,.local .top .sep,.local #staffTag,.local #commune,.local #dlEditor,.local #logout,.local #viewLink{display:none!important}
@@ -172,8 +180,8 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <label for="title">Titre de la vignette</label><input id="title" type="text" maxlength="120" required>
     <div class="row"><div><label for="cat">Catégorie (filtre de la carte)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div><div><label for="icon">Icône</label><select id="icon" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div></div>
     <label>Position sur la carte</label>
-    <div class="mm" id="mm"><div class="mmz" id="mmz"><img id="mmImg" alt="Plan de la commune"><span class="pin" id="mmPin" hidden></span></div></div>
-    <div class="mmtools"><button type="button" class="btn ghost" id="mmIn" title="Zoomer">＋</button><button type="button" class="btn ghost" id="mmOut" title="Dézoomer">－</button><button type="button" class="btn ghost" id="mmReset" title="Revenir à la position enregistrée">↺</button><span class="hint" id="mmHint">Cliquez sur le plan pour placer ou déplacer le lieu.</span></div>
+    <div class="pos"><span class="st" id="posSt"></span><button type="button" class="btn ghost" id="posPick">📍 Placer sur la carte 3D</button><button type="button" class="btn ghost" id="posReset" title="Revenir à la position enregistrée" hidden>↺ Position enregistrée</button><button type="button" class="btn ghost" id="pvOpen">🗺 Voir la carte 3D</button></div>
+    <p class="hint" id="posHint">« Placer sur la carte 3D », puis cliquez dans l’aperçu de la carte à l’endroit du lieu. Glisser : tourner la vue ; molette : zoomer ; Échap : annuler.</p>
     <label>Photos <span id="photoCount" class="hint"></span></label>
     <div class="gal" id="gal"></div>
     <div class="drop"><span>＋</span><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" multiple></div>
@@ -187,6 +195,8 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <div class="card" aria-label="Aperçu de la vignette"><div class="k" id="pvK"></div><h3 id="pvT"></h3><img id="pvI" alt="" hidden><p id="pvP"></p><a id="pvA" target="_blank" rel="noopener" hidden></a></div></div>
   </form>
   </div>
+  <div id="split" hidden role="separator" aria-orientation="vertical" aria-label="Largeur de l’aperçu de la carte" title="Glisser pour agrandir ou réduire l’aperçu de la carte"></div>
+  <aside id="pv" hidden><div class="pvh"><b>Aperçu de la carte</b><span class="st" id="pvSt"></span><button type="button" class="btn ghost" id="pvClose">◀ Retour à la fiche</button></div><div class="fr"><iframe id="pvFrame" title="Aperçu de la carte 3D" allow="fullscreen"></iframe></div></aside>
 </section>
 
 <script>
@@ -269,7 +279,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     const th = S.cfg.theme || {}; const r = document.documentElement.style;
     if (th.primary) r.setProperty('--primary', th.primary); if (th.accent) r.setProperty('--accent', th.accent);
     $('#cname').textContent = DEMO || LOCAL ? String(S.cfg.name || '').replace(/ \(démo\)$/, '') : S.cfg.name; $('#logo').hidden = true; if (th.logo) { const l = $('#logo'); l.src = /^https?:/.test(th.logo) ? th.logo : cfile(S.slug, th.logo); l.hidden = false; }
-    const v = $('#viewLink'); v.href = SITE + '?c=' + S.slug; v.hidden = !!(DEMO || LOCAL); $('#logout').hidden = !!(DEMO || LOCAL);
+    const v = $('#viewLink'); v.href = SITE + '?c=' + S.slug; v.hidden = !!(DEMO || LOCAL); $('#logout').hidden = !!(DEMO || LOCAL); pvLoad();
   }
   const photoUrl = u => !u ? '' : /^(https?:|data:)/.test(u) ? u : cfile(S.slug, u);
   // options d'affichage : null en base = valeur définie par ANTEMIC (config publiée)
@@ -378,7 +388,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     sel.innerHTML = ''; sel.append(new Option(`Choisir une commune… (${list.length} carte${list.length > 1 ? 's' : ''} en ligne)`, ''));
     for (const c of list.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))) sel.append(new Option(`${c.nom} (${n[c.insee] || 0} lieu${(n[c.insee] || 0) > 1 ? 'x' : ''})`, c.insee));
     sel.value = list.some(c => c.insee === keep) ? keep : ''; S.fComm = sel.value;
-    sel.onchange = () => { S.fComm = sel.value; try { sessionStorage.setItem('antemic-fcomm-' + S.slug, S.fComm); } catch (e) {} S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); const first = S.rows.find(r => !S.fComm || rowInsee(r) === S.fComm); if (S.fComm && first) edit(first); };
+    sel.onchange = () => { S.fComm = sel.value; pvLoad(); try { sessionStorage.setItem('antemic-fcomm-' + S.slug, S.fComm); } catch (e) {} S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); const first = S.rows.find(r => !S.fComm || rowInsee(r) === S.fComm); if (S.fComm && first) edit(first); };
   }
   function renderList() {
     const fold = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); const f = fold($('#filter').value.trim()); const box = $('#items'); box.innerHTML = '';
@@ -411,39 +421,56 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
     $('#fTitle').textContent = row.isNew ? 'Nouveau lieu' : row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
     $('#bLabel').value = row.button_label || ''; $('#bUrl').value = row.button_url || ''; $('#photoFile').value = '';
-    S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com'; $('#icon').value = S.pos?.icon || 'com';
+    pickStop(); S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com'; $('#icon').value = S.pos?.icon || 'com';
     $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
-    $('#fHint').textContent = row.isNew ? 'Nouveau lieu : placez-le sur le plan, choisissez sa catégorie, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
-    $('#saveMsg').textContent = ''; drawGal(); drawMM(true); preview();
+    $('#fHint').textContent = row.isNew ? 'Nouveau lieu : cliquez sur la carte 3D à l’endroit du lieu, choisissez sa catégorie et son icône, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
+    $('#saveMsg').textContent = ''; drawGal(); showPos(true); preview();
   }
-  // ---- plan de placement : orthophoto (ou texture du sol) de la carte, emprise config.mapBox { box: [x0, y0, x1, y1], image }
-  S.z = 1;
-  function drawMM(center) {
-    const mb = S.cfg.mapBox, mm = $('#mm'), img = $('#mmImg'), pin = $('#mmPin');
-    const ok = !!(mb && mb.box && mb.box.length === 4); mm.hidden = !ok; $('#mmIn').hidden = $('#mmOut').hidden = $('#mmReset').hidden = !ok;
-    if (!ok) { $('#mmHint').textContent = 'Plan de placement indisponible pour cette carte : demandez à ANTEMIC de la republier.'; return; }
-    $('#mmHint').textContent = 'Cliquez sur le plan pour placer ou déplacer le lieu.';
-    const key = S.slug + '/' + mb.image; if (img.dataset.k !== key) { img.dataset.k = key; img.dataset.fb = ''; img.onerror = () => { if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = cfile(S.slug, 'lc_base.png'); } }; img.src = cfile(S.slug, mb.image || 'lc_base.png'); }
-    $('#mmz').style.setProperty('--z', S.z);
-    const [x0, y0, x1, y1] = mb.box; const U = (x) => (x - x0) / (x1 - x0) * 100, V = (y) => (y1 - y) / (y1 - y0) * 100;
-    const z = $('#mmz'); z.querySelectorAll('.dot').forEach(d => d.remove());
-    for (const r of S.rows) { if (r === S.cur) continue; const q = placeOf(r); if (!q) continue; const d = document.createElement('i'); d.className = 'dot'; d.style.left = U(q.x) + '%'; d.style.top = V(q.y) + '%'; z.append(d); }
-    pin.hidden = !S.pos; if (S.pos) { pin.style.left = U(S.pos.x) + '%'; pin.style.top = V(S.pos.y) + '%'; }
-    if (center && S.pos) requestAnimationFrame(() => { mm.scrollLeft = U(S.pos.x) / 100 * z.offsetWidth - mm.clientWidth / 2; mm.scrollTop = V(S.pos.y) / 100 * z.offsetHeight - mm.clientHeight / 2; });
+  // ---- position sur l'aperçu 3D (17/11, remplace le plan 2D) : la page qui contient l'espace (démo en ligne, éditeur) fournit sa carte
+  //      (window.antemicHost { viewer(), show(on) }) ; espace seul : aperçu intégré à droite (?admin=1 : sans mesure d'audience)
+  const host = () => { try { return parent !== window && parent.antemicHost || null; } catch (e) { return null; } };
+  const V = () => { const h = host(); if (h) return h.viewer(); if ($('#pv').hidden) return null; try { return $('#pvFrame').contentWindow.__viewer || null; } catch (e) { return null; } };
+  const viewerReady = (old) => new Promise(res => { const t0 = Date.now(); const k = setInterval(() => { const v = V(); if ((v && v !== old) || Date.now() - t0 > 60000) { clearInterval(k); res(v && v !== old ? v : null); } }, 300); });
+  function pvLoad() {
+    if (host() || !S.slug) return; const own = !host(); document.documentElement.classList.toggle('haspv', own); $('#pv').hidden = $('#split').hidden = !own;
+    const m = S.insee || S.fComm; const src = SITE + '?c=' + encodeURIComponent(S.slug) + (m && S.cfg.submaps?.[m] ? '&m=' + encodeURIComponent(m) : '') + '&admin=1';
+    const f = $('#pvFrame'); if (f.dataset.src !== src) { f.dataset.src = src; f.src = src + '&t=' + Date.now(); }
   }
-  $('#mmz').addEventListener('click', (e) => {
-    const mb = S.cfg.mapBox; if (!mb || !S.cur) return; const r = $('#mmz').getBoundingClientRect(); const [x0, y0, x1, y1] = mb.box;
-    const u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height; if (u < 0 || u > 1 || v < 0 || v > 1) return;
-    S.pos = { x: Math.round((x0 + u * (x1 - x0)) * 10) / 10, y: Math.round((y1 - v * (y1 - y0)) * 10) / 10, cat: $('#cat').value, icon: $('#icon').value }; drawMM(false);
-  });
-  const zoom = (k) => { S.z = Math.max(1, Math.min(16, S.z * k)); drawMM(true); };
-  $('#mmIn').onclick = () => zoom(2); $('#mmOut').onclick = () => zoom(0.5); $('#mmReset').onclick = () => { S.pos = S.pos0 ? { ...S.pos0 } : null; drawMM(true); };
-  // ---- nouveau lieu (créé par la commune) : au centre du plan, catégorie « Commerce et services » par défaut
+  const pvReload = () => { if (host()) return; const f = $('#pvFrame'); if (f.dataset.src) f.src = f.dataset.src + '&t=' + Date.now(); };
+  const same = (a, b) => a && b && Math.hypot(a.x - b.x, a.y - b.y) < 0.5;
+  function showPos(fly) {
+    const st = $('#posSt'); const moved = S.pos && S.pos0 && !same(S.pos, S.pos0);
+    st.className = 'st' + (!S.pos ? ' no' : moved || (S.cur?.isNew) ? ' new' : '');
+    st.textContent = !S.pos ? 'Pas encore placé' : S.cur?.isNew ? '✓ Placé (à enregistrer)' : moved ? '✓ Nouvelle position (à enregistrer)' : '✓ Placé';
+    $('#posReset').hidden = !moved;
+    const v = V(); if (!v) return;
+    try { if (S.pos && (moved || S.cur?.isNew)) v.mark(S.pos.x, S.pos.y); else v.mark(null); if (fly && S.pos) v.flyTo(S.pos.x, S.pos.y, 420); } catch (e) {}
+  }
+  let picking = false;
+  function pickStop() { if (!picking) return; picking = false; try { V()?.pickCancel(); } catch (e) {} }
+  async function pickStart() {
+    if (picking) { pickStop(); return; }
+    const h = host(); h?.show?.(true); if (!h && !$('#pv').hidden) document.documentElement.classList.add('pvopen');
+    const v = V() || await viewerReady(null); if (!v) { $('#saveMsg').textContent = 'Carte 3D pas encore chargée : réessayez dans un instant.'; return; }
+    picking = true; document.documentElement.classList.add('picking'); $('#posPick').textContent = '📍 Cliquez sur la carte… (Échap : annuler)';
+    const cur = S.cur; let r = null; try { r = await v.pickClick(); } catch (e) {}
+    picking = false; document.documentElement.classList.remove('picking', 'pvopen'); $('#posPick').textContent = '📍 Placer sur la carte 3D'; h?.show?.(false);
+    if (r && S.cur === cur) { S.pos = { x: r.x, y: r.y, cat: $('#cat').value, icon: $('#icon').value }; showPos(false); }
+  }
+  $('#posPick').onclick = pickStart;
+  $('#posReset').onclick = () => { S.pos = S.pos0 ? { ...S.pos0 } : null; showPos(true); };
+  $('#pvOpen').onclick = () => document.documentElement.classList.add('pvopen'); $('#pvClose').onclick = () => { pickStop(); document.documentElement.classList.remove('pvopen'); };
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && picking) pickStop(); });
+  // séparateur : largeur de l'aperçu, mémorisée sur ce poste
+  { const app = $('#app'), sp = $('#split'); try { const w = localStorage.getItem('antemic-admin-pvw'); if (w) app.style.setProperty('--pvw', w); } catch (e) {}
+    sp.addEventListener('pointerdown', (e) => { e.preventDefault(); sp.setPointerCapture(e.pointerId); document.documentElement.classList.add('dragging'); });
+    sp.addEventListener('pointermove', (e) => { if (!sp.hasPointerCapture(e.pointerId)) return; const r = app.getBoundingClientRect(); const w = Math.max(260, Math.min(r.right - e.clientX, r.width - 340 - 360 - 10)); app.style.setProperty('--pvw', Math.round(w) + 'px'); });
+    const end = (e) => { if (!sp.hasPointerCapture(e.pointerId)) return; sp.releasePointerCapture(e.pointerId); document.documentElement.classList.remove('dragging'); try { localStorage.setItem('antemic-admin-pvw', app.style.getPropertyValue('--pvw')); } catch (x) {} };
+    sp.addEventListener('pointerup', end); sp.addEventListener('pointercancel', end); }
+  // ---- nouveau lieu (créé par la commune) : fiche vierge, puis placement direct sur la carte 3D
   $('#addPoi').onclick = () => {
-    const mb = S.cfg.mapBox; const c = mb ? { x: (mb.box[0] + mb.box[2]) / 2, y: (mb.box[1] + mb.box[3]) / 2 } : null;
-    const near = S.rows.map(placeOf).filter(Boolean); const ctr = near.length ? { x: near.reduce((t, q) => t + q.x, 0) / near.length, y: near.reduce((t, q) => t + q.y, 0) / near.length } : c;
-    edit({ poi_id: '', isNew: true, origin: 'commune', title: '', text: '', photos: [], photo_url: '', button_label: 'En savoir plus', button_url: '', place: ctr ? { x: Math.round(ctr.x), y: Math.round(ctr.y), cat: 'com', icon: 'com' } : null });
-    $('#title').focus();
+    edit({ poi_id: '', isNew: true, origin: 'commune', title: '', text: '', photos: [], photo_url: '', button_label: 'En savoir plus', button_url: '', place: null });
+    $('#title').focus(); pickStart();
   };
   $('#addPoi2').onclick = () => $('#addPoi').click();
   $('#delPoi').onclick = async () => {
@@ -451,7 +478,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     try {
       if (LOCAL) await L.save(c => { c.pois = (c.pois || []).filter(q => q.id !== row.poi_id); });
       else { await fresh(); const r = await fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(row.poi_id)}`, { method: 'DELETE', headers: { ...H(), Prefer: 'return=minimal' } }); if (!r.ok) throw new Error('Suppression refusée (' + r.status + ').'); }
-      S.rows = S.rows.filter(r => r !== row); S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); notify('poi-del:' + row.poi_id);
+      S.rows = S.rows.filter(r => r !== row); S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); notify('poi-del:' + row.poi_id); pvReload();
     } catch (e) { $('#saveMsg').textContent = e.message; }
   };
   function preview() {
@@ -495,7 +522,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     try {
       const cur = S.cur, isNew = !!cur.isNew;
       if (!$('#title').value.trim()) throw new Error('Indiquez un titre.');
-      if (isNew && !S.pos) throw new Error('Placez le lieu sur le plan.');
+      if (isNew && !S.pos) throw new Error('Placez le lieu sur la carte 3D (« 📍 Placer sur la carte 3D »).');
       let u = $('#bUrl').value.trim(); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); try { if (u) new URL(u); } catch { throw new Error('Lien du bouton invalide.'); } $('#bUrl').value = u;
       const id = isNew ? newId($('#title').value) : cur.poi_id; const cat = $('#cat').value, icon = $('#icon').value;
       const patch = { title: $('#title').value.trim(), text: $('#text').value, button_label: $('#bLabel').value.trim() || 'En savoir plus', button_url: u };
@@ -510,7 +537,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
           p.photos = S.photos.map(q => ({ url: q.url, alt: patch.title, credit: (q.credit || '').trim().slice(0, 200) })); p.photo = p.photos[0] || null;
           if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; p.iconType = icon; return p; });
         const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur;
-        renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); return;
+        const v0 = V(); renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); refocus(v0); return;
       }
       await fresh(); if (Date.now() > S.exp) throw new Error('Session expirée : reconnectez-vous.');
       for (const [k, q] of S.photos.entries()) if (q.blob) {
@@ -535,9 +562,11 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       if (!r.ok) throw new Error('Enregistrement refusé (' + r.status + ').');
       const [row] = await r.json(); if (!row) throw new Error('Ce lieu ne peut pas être modifié avec ce code.');
       if (isNew) { S.rows.push(row); S.cur = row; } else Object.assign(cur, row);
-      renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; notify('poi:' + id);
+      renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; const v0 = V(); notify('poi:' + id); pvReload(); refocus(v0);
     } catch (err) { $('#saveMsg').textContent = err.message; } finally { btn.disabled = false; }
   };
+  // carte rechargée après un enregistrement : vue recentrée sur le lieu
+  async function refocus(old) { const p = S.pos; const v = await viewerReady(old); if (v && p && S.pos === p) setTimeout(() => { try { v.flyTo(p.x, p.y, 420); } catch (e) {} }, 800); }
   $('#filter').oninput = renderList;
   $('#logout').onclick = () => { try { sessionStorage.removeItem('antemic-admin'); } catch (e) {} location.reload(); };
   async function start(code) {
