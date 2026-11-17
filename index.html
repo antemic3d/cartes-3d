@@ -697,6 +697,32 @@ header.has-logo span{margin-top:0}
 :root.tpl #photoPopover.compact>:not(#photoGrid):not(#closePhotos):not(.pop-size){margin-left:4px;margin-right:4px}
 :root[data-style=atelier] #photoPopover.compact h2,:root[data-style=patrimoine] #photoPopover.compact h2{font-size:19px}
 @media(max-width:700px){:root.tpl #photoPopover.compact,#photoPopover.compact{left:10px!important;right:10px;top:auto!important;bottom:10px;width:auto}}
+
+/* ---------- itinéraire sur smartphone (17/11/2026) : petite fenêtre en bas ; Aller / Circuit, ordre des étapes, mode ; choix en touchant les lieux et la carte ---------- */
+.route-mob{display:none}
+@media(max-width:700px){
+  #routePanel,.tpl #routePanel,:root[data-style=patrimoine] #routePanel{position:absolute;left:8px;right:8px;top:auto;bottom:8px;width:auto;max-width:none;min-height:0;max-height:min(48%,330px);padding:10px 12px 10px;border-radius:16px;border:1px solid var(--line,#dce2d2);box-shadow:0 10px 30px rgba(0,0,0,.2)}
+  #routePanel:not(:has(#routeOut:not([hidden]))) .detail-kicker,#routePanel:not(:has(#routeOut:not([hidden])))>h2,#routePanel .rl,#routePanel .route-from,#routeGo,#tourFilter,#tourList,#routePanel .tour-tip,#routePanel label.chk,#routeQuit{display:none!important}
+  #routePanel .detail-kicker,#routePanel>h2{display:none}
+  #routeTabs{margin:0 66px 8px 0}#routeTabs button{padding:7px 8px;font-size:12.5px}
+  #closeRoute,#routeMin{top:8px}
+  .route-mob{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12.5px}
+  .route-mob small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
+  .route-mob span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .rm-go{display:flex;gap:4px;flex:1;min-width:0}
+  .rm-dep,.rm-to{flex:1;min-width:0;text-align:left;font:inherit;color:inherit;background:color-mix(in srgb,var(--paper,#fff) 70%,#fff);border:1px dashed var(--line,#cfd6c6);border-radius:10px;padding:5px 8px}
+  .rm-dep.set,.rm-to.set{border-style:solid}
+  .rm-me{flex:none;width:38px;border:1px solid var(--line,#cfd6c6);border-radius:10px;background:#fff;color:var(--ink,#222);font-size:17px}
+  .rm-arrow{flex:none;opacity:.6}.rm-to{flex:1}
+  .rm-tip{margin:0;font-size:12.5px;opacity:.8}
+  #tourChosen{display:flex;flex-wrap:nowrap;gap:5px;overflow-x:auto;margin:0 0 6px;padding-bottom:2px}
+  #tourChosen .chip{flex:none;font-size:12px;padding:4px 8px}
+  #tourOrder{display:flex;gap:12px;margin:0 0 8px;font-size:12.5px}
+  #routeMode{margin:0 0 8px}#routeMode button{padding:7px 8px;font-size:12.5px}
+  #routePanel .calc{margin:0}#goCalc{width:100%;padding:10px}
+  .route-hint{display:none!important}
+  #routeOut{max-height:none}
+}
 </style>
 </head>
 <body>
@@ -794,6 +820,6 @@ header.has-logo span{margin-top:0}
 <p>Relief : IGN RGE ALTI®. Bâtiments, routes, cours d’eau, forêts et limites : IGN BD TOPO® et Admin Express. Les teintes du sol sont une interprétation pastel des orthophotographies IGN BD ORTHO®. Données publiées sous Licence Ouverte Etalab 2.0. Les hauteurs des bâtiments sont celles mesurées par l’IGN ; toitures, fenêtres, arbres, oiseaux et nuages sont des interprétations.</p>
 <p id="aboutExtra"></p>
 <p class="made">Conception : <a href="https://antemic.fr" target="_blank" rel="noopener">ANTEMIC</a>, studio 3D, Clermont-Ferrand.</p></dialog>
-<script src="app.js?v=mwkklpi4"></script>
+<script src="app.js?v=mwkl0wky"></script>
 </body>
 </html>
