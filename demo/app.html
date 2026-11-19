@@ -327,7 +327,7 @@ button[disabled]{opacity:.4}
   var small = function () { return window.matchMedia && matchMedia('(max-width: 760px)').matches; };
   var track = function (m) { try { fetch(SB.url + '/rest/v1/rpc/demo_share_view', { method: 'POST', headers: hdr(false), body: JSON.stringify({ k: QS.k, m: m }) }); } catch (e) {} };
   var asset = function (f) { return !f ? '' : /^(https?:|data:)/.test(f) ? f : (SH.files[f.replace(/^\.\//, '')] || ''); };
-  var viewerSrc = function () { return '../?c=' + encodeURIComponent(SH.slug) + '&files=1' + (SH.sub ? '&m=' + encodeURIComponent(SH.sub) : ''); }; // sub : commune d'agglomération choisie dans l'espace commune (18/11)
+  var viewerSrc = function () { return '../?c=' + encodeURIComponent(SH.slug) + '&files=1'; };
   var fmtDay = function (d) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); };
   var toastT = null;
   function toast(t) { var e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { e.style.display = 'none'; }, 3200); }
@@ -454,9 +454,7 @@ button[disabled]{opacity:.4}
   // l'espace commune (iframe admin/) place les lieux sur cette carte : clic sur l'aperçu 3D (window.__viewer.pickClick)
   window.antemicHost = {
     viewer: function () { var fr = $('aFr'), f = fr && fr.getElementsByTagName('iframe')[0]; try { return f && f.contentWindow.__viewer || null; } catch (e) { return null; } },
-    show: function (on) { var a = $('admw'); if (a) a.className = on ? 'admw map' : 'admw'; },
-    // agglomération (18/11) : commune choisie dans l'espace commune → carte détaillée de cette commune ('' = vue générale)
-    sub: function (insee) { insee = insee || ''; if (!SH || (SH.sub || '') === insee) return; SH.sub = insee; reloadMaps(); }
+    show: function (on) { var a = $('admw'); if (a) a.className = on ? 'admw map' : 'admw'; }
   };
   function fitPhone() {
     var ph = $('ph'); if (!ph) return; ph.style.transform = ''; ph.style.margin = '';

@@ -190,9 +190,6 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <h2 id="fTitle"></h2><p class="hint" id="fHint">Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.</p>
     <label for="title">Titre de la vignette</label><input id="title" type="text" maxlength="120" required>
     <div class="row"><div><label for="cat">Catégorie (filtre de la carte)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div><div><label for="icon">Icône</label><select id="icon" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div></div>
-    <label for="lh">Hauteur du titre sur la carte</label>
-    <div class="pos"><input id="lh" type="number" min="0" max="500" step="1" style="width:130px" aria-describedby="lhHint"><span class="hint">mètres au-dessus du sol</span><button type="button" class="btn ghost" id="lhReset" title="Revenir à la hauteur définie par ANTEMIC">Par défaut</button></div>
-    <p class="hint" id="lhHint">Plus haut : le titre se lit au-dessus des toits et des arbres. Vide : hauteur définie par ANTEMIC. Le titre reste toujours au-dessus du bâtiment 3D du lieu.</p>
     <label>Position sur la carte</label>
     <div class="pos"><span class="st" id="posSt"></span><button type="button" class="btn ghost" id="posPick">📍 Placer sur la carte 3D</button><button type="button" class="btn ghost" id="posReset" title="Revenir à la position enregistrée" hidden>↺ Position enregistrée</button><button type="button" class="btn ghost" id="pvOpen">🗺 Voir la carte 3D</button></div>
     <p class="hint" id="posHint">« Placer sur la carte 3D », puis cliquez dans l’aperçu de la carte à l’endroit du lieu. Glisser : tourner la vue ; molette : zoomer ; Échap : annuler.</p>
@@ -273,7 +270,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     async cfg() { const r = await fetch(API, { cache: 'no-cache' }); if (!r.ok) throw new Error('Carte introuvable dans l’éditeur (' + r.status + ').'); return (await r.json()).config; },
     async save(mut) { const c = await L.cfg(); const out = mut(c); const r = await fetch(API, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(c) }); if (!r.ok) throw new Error('Enregistrement refusé par l’éditeur (' + r.status + ').'); S.cfg = c; return out; },
     async upload(blob, rel) { const r = await fetch(API + '/upload?path=' + encodeURIComponent(rel), { method: 'POST', body: blob }); if (!r.ok) throw new Error('Envoi refusé (' + r.status + ').'); return rel; },
-    row(p) { const g = p.photos && p.photos.length ? p.photos : p.photo && p.photo.url ? [p.photo] : []; return { poi_id: p.id, title: p.title || '', text: p.text || '', photo_url: (g[0] || {}).url || '', photos: g.map(q => ({ url: q.url, credit: q.credit || '' })), button_label: (p.button || {}).label || 'En savoir plus', button_url: (p.button || {}).url || '', place: null, label_h: null, origin: p.byCommune ? 'commune' : 'editeur', updated_by: 'editeur' }; }
+    row(p) { const g = p.photos && p.photos.length ? p.photos : p.photo && p.photo.url ? [p.photo] : []; return { poi_id: p.id, title: p.title || '', text: p.text || '', photo_url: (g[0] || {}).url || '', photos: g.map(q => ({ url: q.url, credit: q.credit || '' })), button_label: (p.button || {}).label || 'En savoir plus', button_url: (p.button || {}).url || '', place: null, origin: p.byCommune ? 'commune' : 'editeur', updated_by: 'editeur' }; }
   };
   const fresh = async () => { if (DEMO && DCODE && Date.now() > (S.exp || 0)) await login(DCODE); }; // jeton d'une heure : reconnexion silencieuse en démo
   const slugFromCode = c => c.trim().toUpperCase().split('-').slice(0, -2).join('-').toLowerCase();
@@ -430,7 +427,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     const keep = S.fComm ?? (() => { try { return sessionStorage.getItem('antemic-fcomm-' + S.slug) || ''; } catch (e) { return ''; } })();
     sel.innerHTML = ''; sel.append(new Option(`Choisir une commune… (${list.length} carte${list.length > 1 ? 's' : ''} en ligne)`, ''));
     for (const c of list.slice().sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))) sel.append(new Option(`${c.nom} (${n[c.insee] || 0} lieu${(n[c.insee] || 0) > 1 ? 'x' : ''})`, c.insee));
-    sel.value = list.some(c => c.insee === keep) ? keep : ''; S.fComm = sel.value; pvLoad(); // commune mémorisée : sa carte dans l'aperçu
+    sel.value = list.some(c => c.insee === keep) ? keep : ''; S.fComm = sel.value;
     sel.onchange = () => { S.fComm = sel.value; pvLoad(); try { sessionStorage.setItem('antemic-fcomm-' + S.slug, S.fComm); } catch (e) {} S.cur = null; $('#form').hidden = true; $('#none').hidden = false; renderList(); const first = S.rows.find(r => !S.fComm || rowInsee(r) === S.fComm); if (S.fComm && first) edit(first); };
   }
   function renderList() {
@@ -461,23 +458,12 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   { const sel = $('#cat'); for (const c of CATS) sel.append(new Option(c.label, c.id)); sel.addEventListener('change', () => preview());
     const ic = $('#icon'); for (const c of ICONS) ic.append(new Option(`${c.icon}  ${c.label}`, c.id)); ic.addEventListener('change', () => preview());
     ic.hidden = true; ic.after(icPick.el); icPick.paint(); }
-  // hauteur du titre (18/11/2026) : choix de la commune (pois.label_h), sinon valeur de l'éditeur (config.json › labelH), sinon hauteur de la carte
-  const num = (v) => v == null || v === '' || !Number.isFinite(+v) ? null : +v;
-  const lhEd = (row) => num(baseOf(row)?.labelH); // valeur ANTEMIC du lieu
-  const lhDef = (row) => lhEd(row) ?? Math.max(0, num(S.cfg.theme?.labelHeight) ?? 25);
-  const lhCur = (row) => num(row.label_h) ?? lhEd(row); // valeur enregistrée affichée (null = défaut)
-  const lhVal = () => { const v = num($('#lh').value.trim()); return v == null ? null : Math.min(500, Math.max(0, Math.round(v))); };
-  function lhShow(row) { const v = lhCur(row); $('#lh').value = v == null ? '' : v; $('#lh').placeholder = lhDef(row) + ' (défaut)'; $('#lhReset').hidden = $('#lh').value === ''; }
-  const lhLive = () => { const r = S.cur; if (!r || r.isNew) return; const v = lhVal(); try { V()?.labelHeight?.(r.poi_id, v ?? lhEd(r)); } catch (e) {} $('#lhReset').hidden = $('#lh').value === ''; };
-  $('#lh').addEventListener('input', lhLive);
-  $('#lhReset').onclick = () => { $('#lh').value = ''; lhLive(); };
   function edit(row) {
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
     $('#fTitle').textContent = row.isNew ? 'Nouveau lieu' : row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
     $('#bLabel').value = row.button_label || ''; $('#bUrl').value = row.button_url || ''; $('#photoFile').value = '';
     pickStop(); S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com'; $('#icon').value = S.pos?.icon || 'com'; icPick.paint();
     $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
-    lhShow(row); if (!row.isNew) { try { V()?.labelHeight?.(row.poi_id, lhCur(row)); } catch (e) {} } // annule un essai non enregistré
     $('#fHint').textContent = row.isNew ? 'Nouveau lieu : cliquez sur la carte 3D à l’endroit du lieu, choisissez sa catégorie et son icône, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
     $('#saveMsg').textContent = ''; drawGal(); showPos(true); preview();
   }
@@ -487,11 +473,8 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
   const V = () => { const h = host(); if (h) return h.viewer(); if ($('#pv').hidden) return null; try { return $('#pvFrame').contentWindow.__viewer || null; } catch (e) { return null; } };
   const viewerReady = (old) => new Promise(res => { const t0 = Date.now(); const k = setInterval(() => { const v = V(); if ((v && v !== old) || Date.now() - t0 > 60000) { clearInterval(k); res(v && v !== old ? v : null); } }, 300); });
   function pvLoad() {
-    if (!S.slug) return; const m0 = S.insee || S.fComm, m = m0 && S.cfg.submaps?.[m0] ? m0 : '';
-    // agglomération (18/11) : commune choisie → carte détaillée de cette commune, aussi dans la carte de la page hôte (éditeur, page démo)
-    const hh = host(); if (hh) { try { hh.sub?.(m); } catch (e) {} return; }
-    document.documentElement.classList.add('haspv'); $('#pv').hidden = $('#split').hidden = false;
-    const src = SITE + '?c=' + encodeURIComponent(S.slug) + (m ? '&m=' + encodeURIComponent(m) : '') + '&admin=1';
+    if (host() || !S.slug) return; const own = !host(); document.documentElement.classList.toggle('haspv', own); $('#pv').hidden = $('#split').hidden = !own;
+    const m = S.insee || S.fComm; const src = SITE + '?c=' + encodeURIComponent(S.slug) + (m && S.cfg.submaps?.[m] ? '&m=' + encodeURIComponent(m) : '') + '&admin=1';
     const f = $('#pvFrame'); if (f.dataset.src !== src) { f.dataset.src = src; f.src = src + '&t=' + Date.now(); }
   }
   const pvReload = () => { if (host()) return; const f = $('#pvFrame'); if (f.dataset.src) f.src = f.dataset.src + '&t=' + Date.now(); };
@@ -587,15 +570,13 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       // position : envoyée si elle diffère de la carte publiée (sinon effacée) ; toujours pour un lieu créé par la commune
       const b0 = baseOf(cur); const moved = S.pos && (!b0 || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== catOk(b0.cat) || icon !== iconOf(b0));
       const place = S.pos ? { x: S.pos.x, y: S.pos.y, cat, icon } : null;
-      // hauteur du titre : envoyée si elle diffère de la valeur ANTEMIC du lieu (sinon null = valeur ANTEMIC) ; colonne label_h (schema.sql du 18/11)
-      const lv = lhVal(); const lhSend = lv == null || (lhEd(cur) != null && Math.abs(lv - lhEd(cur)) < 0.05) ? null : lv;
       if (LOCAL) { // démo dans l'éditeur : photos dans le dossier de la carte, lieu écrit dans config.json
         for (const [k, q] of S.photos.entries()) if (q.blob) { q.url = await L.upload(q.blob, `photos/${id}-${Date.now()}-${k}.jpg`); delete q.blob; }
         const p = await L.save(c => { c.pois = c.pois || []; let p = c.pois.find(q => q.id === id);
           if (!p) { p = { id, byCommune: true, source: 'Espace commune', photo: null, photos: [] }; c.pois.push(p); }
           p.title = patch.title; p.text = patch.text; p.button = { label: patch.button_label, url: patch.button_url };
           p.photos = S.photos.map(q => ({ url: q.url, alt: patch.title, credit: (q.credit || '').trim().slice(0, 200) })); p.photo = p.photos[0] || null;
-          if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; p.iconType = icon; const lv = lhVal(); if (lv == null) delete p.labelH; else p.labelH = lv; return p; });
+          if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; p.iconType = icon; return p; });
         const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur;
         const v0 = V(); renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); refocus(v0); return;
       }
@@ -609,13 +590,12 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       patch.photos = S.photos.map(q => ({ url: q.url, credit: (q.credit || '').trim().slice(0, 200) })); patch.photo_url = patch.photos[0]?.url || '';
       let r;
       if (isNew) { // lieu créé par la commune (schema.sql du 16/11/2026 : colonnes place, origin)
-        r = await fetch(`${sb().url}/rest/v1/pois`, { method: 'POST', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify({ client_id: S.slug, poi_id: id, ...(S.insee ? { insee: S.insee } : {}), ...patch, place, ...(lhSend != null ? { label_h: lhSend } : {}), origin: 'commune', updated_by: S.email || (S.slug + '@clients.antemic.fr') }) });
+        r = await fetch(`${sb().url}/rest/v1/pois`, { method: 'POST', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify({ client_id: S.slug, poi_id: id, ...(S.insee ? { insee: S.insee } : {}), ...patch, place, origin: 'commune', updated_by: S.email || (S.slug + '@clients.antemic.fr') }) });
         if (!r.ok) throw new Error(r.status === 401 || r.status === 403 || r.status === 400 ? 'Ajout de lieux pas encore disponible pour cette carte (base à mettre à jour par ANTEMIC).' : 'Enregistrement refusé (' + r.status + ').');
       } else {
         const send = (body) => fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify(body) });
-        const full = { ...patch, ...(moved || cur.place ? { place: moved || cur.origin === 'commune' ? place : null } : {}), ...(lhSend !== num(cur.label_h) ? { label_h: lhSend } : {}) };
+        const full = { ...patch, ...(moved || cur.place ? { place: moved || cur.origin === 'commune' ? place : null } : {}) };
         r = await send(full);
-        if (!r.ok && (r.status === 400 || r.status === 401 || r.status === 403) && 'label_h' in full && /label_h/.test(await r.clone().text())) { const { label_h: _l, ...p0 } = full; r = await send(p0); if (r.ok) $('#saveMsg').dataset.warn = 'lh'; }
         if (!r.ok && (r.status === 400 || r.status === 401 || r.status === 403)) { const txt = await r.clone().text();
           if (/place/.test(txt) && 'place' in full) { const { place: _p, ...p1 } = full; r = await send(p1); if (r.ok) $('#saveMsg').dataset.warn = 'place'; }
           else if (/photos/.test(txt)) { const { photos, ...p1 } = full; r = await send(p1); if (r.ok) $('#saveMsg').dataset.warn = '1'; } } // base sans galerie : 1 photo
@@ -623,7 +603,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       if (!r.ok) throw new Error('Enregistrement refusé (' + r.status + ').');
       const [row] = await r.json(); if (!row) throw new Error('Ce lieu ne peut pas être modifié avec ce code.');
       if (isNew) { S.rows.push(row); S.cur = row; } else Object.assign(cur, row);
-      renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : $('#saveMsg').dataset.warn === 'lh' ? 'Enregistré, sauf la hauteur du titre (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; const v0 = V(); notify('poi:' + id); pvReload(); refocus(v0);
+      renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; const v0 = V(); notify('poi:' + id); pvReload(); refocus(v0);
     } catch (err) { $('#saveMsg').textContent = err.message; } finally { btn.disabled = false; }
   };
   // carte rechargée après un enregistrement : vue recentrée sur le lieu
