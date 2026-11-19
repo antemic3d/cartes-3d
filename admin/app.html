@@ -197,6 +197,8 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <label>Position sur la carte</label>
     <div class="pos"><span class="st" id="posSt"></span><button type="button" class="btn ghost" id="posPick">📍 Placer sur la carte 3D</button><button type="button" class="btn ghost" id="posReset" title="Revenir à la position enregistrée" hidden>↺ Position enregistrée</button><button type="button" class="btn ghost" id="pvOpen">🗺 Voir la carte 3D</button></div>
     <p class="hint" id="posHint">« Placer sur la carte 3D », puis cliquez dans l’aperçu de la carte à l’endroit du lieu. Glisser : tourner la vue ; molette : zoomer ; Échap : annuler.</p>
+    <div class="pos"><input id="addr" type="text" placeholder="Ou son adresse : n°, rue, code postal, ville" style="flex:1;min-width:200px" aria-label="Adresse du lieu"><button type="button" class="btn ghost" id="addrGo">⌖ Localiser l’adresse</button></div>
+    <p class="hint">Le lieu est placé à cette adresse (à vérifier sur la carte, « Placer sur la carte 3D » pour corriger). Le texte de la vignette n’est pas modifié. Puis « Enregistrer ».</p>
     <label>Photos <span id="photoCount" class="hint"></span></label>
     <div class="gal" id="gal"></div>
     <div class="drop"><span>＋</span><input id="photoFile" type="file" accept="image/jpeg,image/png,image/webp" multiple></div>
@@ -482,7 +484,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
     lhShow(row); if (!row.isNew) { try { V()?.labelHeight?.(row.poi_id, lhCur(row)); } catch (e) {} } // annule un essai non enregistré
     $('#fHint').textContent = row.isNew ? 'Nouveau lieu : cliquez sur la carte 3D à l’endroit du lieu, choisissez sa catégorie et son icône, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
-    $('#saveMsg').textContent = ''; drawGal(); showPos(true); preview(); undoShow();
+    $('#saveMsg').textContent = ''; $('#addr').value = ''; drawGal(); showPos(true); preview(); undoShow();
   }
   // ---- position sur l'aperçu 3D (17/11, remplace le plan 2D) : la page qui contient l'espace (démo en ligne, éditeur) fournit sa carte
   //      (window.antemicHost { viewer(), show(on) }) ; espace seul : aperçu intégré à droite (?admin=1 : sans mesure d'audience)
@@ -519,6 +521,28 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     if (r && S.cur === cur) { S.pos = { x: r.x, y: r.y, cat: $('#cat').value, icon: $('#icon').value }; showPos(false); }
   }
   $('#posPick').onclick = pickStart;
+  // 19/11 : placer un lieu par son adresse (Géoplateforme IGN, repli api-adresse) ; repère local de la carte (origine de map.json, comme l'éditeur)
+  async function geocodeAddr(q, citycode) {
+    for (const base of ['https://data.geopf.fr/geocodage/search', 'https://api-adresse.data.gouv.fr/search/']) {
+      try { const r = await fetch(`${base}?q=${encodeURIComponent(q)}${citycode ? '&citycode=' + citycode : ''}&limit=1`); if (!r.ok) continue; const f = (await r.json()).features?.[0];
+        if (f && (f.properties?.score ?? 1) >= 0.45) return f.geometry.coordinates; return null; } catch (e) { /* service suivant */ } }
+    throw new Error('Service d’adresses injoignable : placez le lieu sur la carte 3D.');
+  }
+  async function locateAddr() {
+    const a = $('#addr').value.trim(); if (a.length < 4) { $('#saveMsg').textContent = 'Saisissez l’adresse du lieu.'; return; }
+    const b = $('#addrGo'); b.disabled = true; $('#saveMsg').textContent = 'Recherche de l’adresse…';
+    try {
+      const v = V() || await viewerReady(null); const o = v?.map?.origin; if (!o) throw new Error('Carte 3D pas encore chargée : réessayez dans un instant.');
+      const ids = [S.insee, S.fComm, S.cfg.insee, ...(S.cfg.communes || []).map(c => c.insee)].filter((x, i, l) => x && l.indexOf(x) === i);
+      let ll = null; for (const id of ids) { ll = await geocodeAddr(a, id); if (ll) break; }
+      const KX = 111320 * Math.cos(o[1] * Math.PI / 180), KY = 110950; const xy = (q) => q && { x: Math.round((q[0] - o[0]) * KX * 10) / 10, y: Math.round((q[1] - o[1]) * KY * 10) / 10 };
+      let p = xy(ll); if (!p) { const q = xy(await geocodeAddr(a, '')); if (q && Math.hypot(q.x, q.y) < 15000) p = q; }
+      if (!p) throw new Error('Adresse introuvable : vérifiez-la, ou placez le lieu sur la carte 3D.');
+      S.pos = { x: p.x, y: p.y, cat: $('#cat').value, icon: $('#icon').value }; showPos(true);
+      $('#saveMsg').textContent = 'Lieu placé à l’adresse indiquée : vérifiez sur la carte, puis « Enregistrer ».';
+    } catch (e) { $('#saveMsg').textContent = e.message; } finally { b.disabled = false; }
+  }
+  $('#addrGo').onclick = locateAddr; $('#addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); locateAddr(); } });
   $('#posReset').onclick = () => { S.pos = S.pos0 ? { ...S.pos0 } : null; showPos(true); };
   $('#pvOpen').onclick = () => document.documentElement.classList.add('pvopen'); $('#pvClose').onclick = () => { pickStop(); document.documentElement.classList.remove('pvopen'); };
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && picking) pickStop(); });
