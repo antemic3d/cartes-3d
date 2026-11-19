@@ -192,6 +192,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <div class="row"><div><label for="cat">Catégorie (filtre de la carte)</label><select id="cat" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div><div><label for="icon">Icône</label><select id="icon" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line)"></select></div></div>
     <label for="lh">Hauteur du titre sur la carte</label>
     <div class="pos"><input id="lh" type="number" min="0" max="500" step="1" style="width:130px" aria-describedby="lhHint"><span class="hint">mètres au-dessus du sol</span><button type="button" class="btn ghost" id="lhReset" title="Revenir à la hauteur définie par ANTEMIC">Par défaut</button></div>
+    <p class="msg" id="lhNo" hidden style="margin-top:6px">La hauteur du titre ne peut pas encore être enregistrée pour cette carte (base à mettre à jour par ANTEMIC). Les autres changements sont enregistrés normalement.</p>
     <p class="hint" id="lhHint">Plus haut : le titre se lit au-dessus des toits et des arbres. Vide : hauteur définie par ANTEMIC. Le titre reste toujours au-dessus du bâtiment 3D du lieu.</p>
     <label>Position sur la carte</label>
     <div class="pos"><span class="st" id="posSt"></span><button type="button" class="btn ghost" id="posPick">📍 Placer sur la carte 3D</button><button type="button" class="btn ghost" id="posReset" title="Revenir à la position enregistrée" hidden>↺ Position enregistrée</button><button type="button" class="btn ghost" id="pvOpen">🗺 Voir la carte 3D</button></div>
@@ -203,7 +204,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     <label for="text">Texte</label><textarea id="text" maxlength="4000"></textarea><div class="count" id="textCount"></div>
     <div class="row"><div><label for="bLabel">Libellé du bouton</label><input id="bLabel" type="text" maxlength="40" placeholder="En savoir plus"></div>
     <div><label for="bUrl">Lien du bouton (vide = pas de bouton)</label><input id="bUrl" type="text" placeholder="www.exemple.fr"></div></div>
-    <div class="actions"><button class="btn big" id="save" type="submit">Enregistrer</button><button class="btn ghost" id="reset" type="button">Annuler les modifications</button><button class="btn ghost" id="delPoi" type="button" hidden style="border-color:#7a2a3a;color:#ff9aac">Supprimer ce lieu</button><span id="saveMsg" class="hint"></span></div>
+    <div class="actions"><button class="btn big" id="save" type="submit">Enregistrer</button><button class="btn ghost" id="reset" type="button">Annuler les modifications</button><button class="btn ghost" id="undoSave" type="button" hidden title="Revient à la version du lieu d’avant le dernier « Enregistrer » (position, textes, photos, hauteur du titre)">↶ Annuler le dernier enregistrement</button><button class="btn ghost" id="delPoi" type="button" hidden style="border-color:#7a2a3a;color:#ff9aac">Supprimer ce lieu</button><span id="saveMsg" class="hint"></span></div>
     </div>
     <div class="side"><p class="k0">Aperçu de la vignette</p>
     <div class="card" aria-label="Aperçu de la vignette"><div class="k" id="pvK"></div><h3 id="pvT"></h3><img id="pvI" alt="" hidden><p id="pvP"></p><a id="pvA" target="_blank" rel="noopener" hidden></a></div></div>
@@ -408,6 +409,8 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     const r = await fetch(sb().url + '/rest/v1/pois?client_id=eq.' + encodeURIComponent(S.slug) + (S.insee ? '&insee=eq.' + encodeURIComponent(S.insee) : '') + '&select=*&order=title', { headers: H() });
     if (!r.ok) throw new Error('Lecture impossible (' + r.status + ')');
     S.rows = await r.json(); await guessInsee(); communeSelect(); renderList();
+    // 19/11 : colonne label_h absente (schema.sql pas relancé) → la hauteur ne s'enregistre pas : dit clairement, champ en lecture seule
+    S.noLh = S.rows.length > 0 && !('label_h' in S.rows[0]); $('#lhNo').hidden = !S.noLh; $('#lh').disabled = $('#lhReset').disabled = !!S.noLh;
   }
   // espace de l'agglomération (code agglo ou ANTEMIC) : choix de la commune dont on modifie les lieux
   const rowInsee = (row) => ((S.cfg.pois || []).find(p => p.id === row.poi_id) || {}).insee || row.insee || (S.poiInsee || {})[row.poi_id] || ''; // config.json d'abord : commune recalculée d'après la position à chaque mise en ligne
@@ -475,11 +478,11 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     S.cur = row; S.photos = rowPhotos(row); $('#form').hidden = false; $('#none').hidden = true; renderList();
     $('#fTitle').textContent = row.isNew ? 'Nouveau lieu' : row.title; $('#title').value = row.title || ''; $('#text').value = row.text || '';
     $('#bLabel').value = row.button_label || ''; $('#bUrl').value = row.button_url || ''; $('#photoFile').value = '';
-    pickStop(); S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || 'com'; $('#icon').value = S.pos?.icon || 'com'; icPick.paint();
+    pickStop(); S.pos0 = placeOf(row) || (row.isNew ? row.place : null); S.pos = S.pos0 ? { ...S.pos0 } : null; $('#cat').value = S.pos?.cat || (baseOf(row) ? catOk(baseOf(row).cat) : '') || 'com'; $('#icon').value = S.pos?.icon || (baseOf(row) ? iconOf(baseOf(row)) : '') || 'com'; icPick.paint();
     $('#delPoi').hidden = row.origin !== 'commune' || !!row.isNew;
     lhShow(row); if (!row.isNew) { try { V()?.labelHeight?.(row.poi_id, lhCur(row)); } catch (e) {} } // annule un essai non enregistré
     $('#fHint').textContent = row.isNew ? 'Nouveau lieu : cliquez sur la carte 3D à l’endroit du lieu, choisissez sa catégorie et son icône, puis « Enregistrer ».' : 'Les changements sont visibles sur la carte dès l’enregistrement. Le modèle 3D des bâtiments est réalisé par ANTEMIC.';
-    $('#saveMsg').textContent = ''; drawGal(); showPos(true); preview();
+    $('#saveMsg').textContent = ''; drawGal(); showPos(true); preview(); undoShow();
   }
   // ---- position sur l'aperçu 3D (17/11, remplace le plan 2D) : la page qui contient l'espace (démo en ligne, éditeur) fournit sa carte
   //      (window.antemicHost { viewer(), show(on) }) ; espace seul : aperçu intégré à droite (?admin=1 : sans mesure d'audience)
@@ -574,18 +577,37 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
     e.target.value = ''; drawGal(); preview();
   };
   $('#reset').onclick = () => edit(S.cur);
+  // 19/11 : annuler un enregistrement (plusieurs de suite possibles, pendant la session) : le lieu reprend sa version précédente
+  S.undo = S.undo || {};
+  function undoPush(id, snap) { if (!snap) return; S.undo = S.undo || {}; (S.undo[id] = S.undo[id] || []).push(snap); if (S.undo[id].length > 20) S.undo[id].shift(); undoShow(); }
+  function undoShow() { const n = (S.undo?.[S.cur?.poi_id] || []).length; const b = $('#undoSave'); b.hidden = !!S.cur?.isNew; b.disabled = !n; b.title = n ? 'Revient à la version du lieu d’avant le dernier « Enregistrer » (position, textes, photos, hauteur du titre)' : 'Rien à annuler : disponible après un « Enregistrer » sur ce lieu (tant que la page reste ouverte)'; b.textContent = '↶ Annuler le dernier enregistrement' + (n > 1 ? ` (${n})` : ''); } // toujours visible (19/11 17h50), grisé tant qu'il n'y a rien à annuler
+  $('#undoSave').onclick = async () => {
+    const row = S.cur; const st = row && S.undo[row.poi_id]; if (!st?.length) return; const prev = st[st.length - 1]; const b = $('#undoSave'); b.disabled = true; pickStop();
+    try {
+      if (LOCAL) { const p = await L.save(c => { const i = (c.pois || []).findIndex(q => q.id === row.poi_id); if (i < 0) throw new Error('Lieu introuvable.'); c.pois[i] = prev; return prev; }); Object.assign(row, L.row(p)); }
+      else {
+        await fresh(); if (Date.now() > S.exp) throw new Error('Session expirée : reconnectez-vous.');
+        const body = {}; for (const k of ['title', 'text', 'photo_url', 'photos', 'button_label', 'button_url', 'place', 'label_h']) if (k in prev) body[k] = prev[k] ?? null;
+        const r = await fetch(`${sb().url}/rest/v1/pois?client_id=eq.${encodeURIComponent(S.slug)}&poi_id=eq.${encodeURIComponent(row.poi_id)}`, { method: 'PATCH', headers: { ...H(true), Prefer: 'return=representation' }, body: JSON.stringify(body) });
+        if (!r.ok) throw new Error('Annulation refusée (' + r.status + ').'); const [nr] = await r.json(); if (!nr) throw new Error('Ce lieu ne peut pas être modifié avec ce code.'); Object.assign(row, nr);
+      }
+      st.pop(); const v0 = V(); renderList(); edit(row); $('#saveMsg').textContent = 'Dernier enregistrement annulé : le lieu a repris sa version précédente.'; notify('poi:' + row.poi_id); pvReload(); refocus(v0);
+    } catch (e) { $('#saveMsg').textContent = e.message; } finally { b.disabled = false; undoShow(); }
+  };
   const newId = (t) => 'c-' + (String(t || 'lieu').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'lieu') + '-' + Date.now().toString(36);
   $('#form').onsubmit = async e => {
     e.preventDefault(); const btn = $('#save'); btn.disabled = true; $('#saveMsg').textContent = 'Enregistrement…';
     try {
       const cur = S.cur, isNew = !!cur.isNew;
+      // 19/11 : version d'avant cet enregistrement, pour « ↶ Annuler le dernier enregistrement »
+      const snap = isNew ? null : JSON.parse(JSON.stringify(LOCAL ? ((S.cfg.pois || []).find(q => q.id === cur.poi_id) || null) : cur));
       if (!$('#title').value.trim()) throw new Error('Indiquez un titre.');
       if (isNew && !S.pos) throw new Error('Placez le lieu sur la carte 3D (« 📍 Placer sur la carte 3D »).');
       let u = $('#bUrl').value.trim(); if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); try { if (u) new URL(u); } catch { throw new Error('Lien du bouton invalide.'); } $('#bUrl').value = u;
       const id = isNew ? newId($('#title').value) : cur.poi_id; const cat = $('#cat').value, icon = $('#icon').value;
       const patch = { title: $('#title').value.trim(), text: $('#text').value, button_label: $('#bLabel').value.trim() || 'En savoir plus', button_url: u };
       // position : envoyée si elle diffère de la carte publiée (sinon effacée) ; toujours pour un lieu créé par la commune
-      const b0 = baseOf(cur); const moved = S.pos && (!b0 || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== catOk(b0.cat) || icon !== iconOf(b0));
+      const b0 = baseOf(cur); const moved = S.pos && (!b0 || b0.x == null || b0.y == null || Math.hypot(S.pos.x - b0.x, S.pos.y - b0.y) >= 0.5 || cat !== catOk(b0.cat) || icon !== iconOf(b0));
       const place = S.pos ? { x: S.pos.x, y: S.pos.y, cat, icon } : null;
       // hauteur du titre : envoyée si elle diffère de la valeur ANTEMIC du lieu (sinon null = valeur ANTEMIC) ; colonne label_h (schema.sql du 18/11)
       const lv = lhVal(); const lhSend = lv == null || (lhEd(cur) != null && Math.abs(lv - lhEd(cur)) < 0.05) ? null : lv;
@@ -596,7 +618,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
           p.title = patch.title; p.text = patch.text; p.button = { label: patch.button_label, url: patch.button_url };
           p.photos = S.photos.map(q => ({ url: q.url, alt: patch.title, credit: (q.credit || '').trim().slice(0, 200) })); p.photo = p.photos[0] || null;
           if (place) { p.x = place.x; p.y = place.y; } p.cat = cat; p.iconType = icon; const lv = lhVal(); if (lv == null) delete p.labelH; else p.labelH = lv; return p; });
-        const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur;
+        const row = L.row(p); if (isNew) S.rows.push(row); else Object.assign(cur, row); S.cur = isNew ? row : cur; undoPush(id, snap);
         const v0 = V(); renderList(); edit(S.cur); $('#saveMsg').textContent = 'Enregistré. La carte de démonstration est mise à jour.'; notify('poi:' + id); refocus(v0); return;
       }
       await fresh(); if (Date.now() > S.exp) throw new Error('Session expirée : reconnectez-vous.');
@@ -622,7 +644,7 @@ input:disabled,select:disabled,textarea:disabled{background:#eee!important;color
       }
       if (!r.ok) throw new Error('Enregistrement refusé (' + r.status + ').');
       const [row] = await r.json(); if (!row) throw new Error('Ce lieu ne peut pas être modifié avec ce code.');
-      if (isNew) { S.rows.push(row); S.cur = row; } else Object.assign(cur, row);
+      if (isNew) { S.rows.push(row); S.cur = row; } else Object.assign(cur, row); undoPush(id, snap);
       renderList(); edit(S.cur); $('#saveMsg').textContent = ($('#saveMsg').dataset.warn === 'place' ? 'Enregistré, sauf la position (base à mettre à jour par ANTEMIC). ' : $('#saveMsg').dataset.warn === 'lh' ? 'Enregistré, sauf la hauteur du titre (base à mettre à jour par ANTEMIC). ' : '') + (DEMO ? 'Enregistré. La carte de démonstration est mise à jour.' : 'Enregistré. La carte est à jour.'); delete $('#saveMsg').dataset.warn; const v0 = V(); notify('poi:' + id); pvReload(); refocus(v0);
     } catch (err) { $('#saveMsg').textContent = err.message; } finally { btn.disabled = false; }
   };

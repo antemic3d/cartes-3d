@@ -389,7 +389,12 @@ button[disabled]{opacity:.4}
   }
 
   function frame(w, h, title) { var f = document.createElement('iframe'); f.src = viewerSrc(); f.title = title || 'Carte 3D interactive'; f.setAttribute('allow', 'geolocation; fullscreen'); f.style.width = w; f.style.height = h; f.className = 'viewer'; return f; }
-  function reloadMaps() { var l = $('vbody').getElementsByTagName('iframe'); for (var i = 0; i < l.length; i++) if (l[i].className === 'viewer') l[i].src = viewerSrc(); }
+  // 19/11 : cadre remplacé par un neuf (changer seulement src ne rechargeait pas toujours la carte : commune de l'agglo jamais affichée)
+  function reloadMaps() {
+    var l = $('vbody').getElementsByTagName('iframe'), old = [];
+    for (var i = 0; i < l.length; i++) if (l[i].className === 'viewer') old.push(l[i]);
+    for (var k = 0; k < old.length; k++) { var o = old[k], n = frame(o.style.width, o.style.height, o.title); n.style.cssText = o.style.cssText; o.parentNode.replaceChild(n, o); }
+  }
 
   function openMode(m) {
     SH.mode = m; track(m); $('share').style.display = 'none'; $('vw').style.display = 'block'; $('vNm').textContent = SH.name;
