@@ -325,9 +325,10 @@ button[disabled]{opacity:.4}
   };
   var mairie = function (n) { return 'Mairie ' + (/^[aeiouyhâéèêîôûAEIOUYHÂÉÈÊÎÔÛ]/.test(n) ? 'd’' : 'de ') + n; };
   var small = function () { return window.matchMedia && matchMedia('(max-width: 760px)').matches; };
-  var track = function (m) { try { fetch(SB.url + '/rest/v1/rpc/demo_share_view', { method: 'POST', headers: hdr(false), body: JSON.stringify({ k: QS.k, m: m }) }); } catch (e) {} };
+  var TEAM = 'equipe' in QS; // ouverture par l'équipe (« Ouvrir » de l'éditeur, 20/11) : ni compteurs du lien, ni mesure d'audience
+  var track = function (m) { if (TEAM) return; try { fetch(SB.url + '/rest/v1/rpc/demo_share_view', { method: 'POST', headers: hdr(false), body: JSON.stringify({ k: QS.k, m: m }) }); } catch (e) {} };
   var asset = function (f) { return !f ? '' : /^(https?:|data:)/.test(f) ? f : (SH.files[f.replace(/^\.\//, '')] || ''); };
-  var viewerSrc = function () { return '../?c=' + encodeURIComponent(SH.slug) + '&files=1' + (SH.sub ? '&m=' + encodeURIComponent(SH.sub) : ''); }; // sub : commune d'agglomération choisie dans l'espace commune (18/11)
+  var viewerSrc = function () { return '../?c=' + encodeURIComponent(SH.slug) + '&files=1' + (SH.sub ? '&m=' + encodeURIComponent(SH.sub) : '') + (TEAM ? '' : '&prospect=1'); }; // prospect : mesure d'audience (20/11) ; &equipe=1 (bouton « Ouvrir » de l'éditeur) : non mesurée // sub : commune d'agglomération choisie dans l'espace commune (18/11)
   var fmtDay = function (d) { return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); };
   var toastT = null;
   function toast(t) { var e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function () { e.style.display = 'none'; }, 3200); }
@@ -336,7 +337,8 @@ button[disabled]{opacity:.4}
   function shareStart() {
     $('app').style.display = 'none';
     fetch('supabase.json', { cache: 'no-cache' }).then(json).then(function (j) {
-      SB = j; return fetch(SB.url + '/rest/v1/rpc/demo_share_open', { method: 'POST', headers: hdr(false), body: JSON.stringify({ k: QS.k }) }).then(json);
+      SB = j; var open = function (b) { return fetch(SB.url + '/rest/v1/rpc/demo_share_open', { method: 'POST', headers: hdr(false), body: JSON.stringify(b) }).then(json); };
+      return TEAM ? open({ k: QS.k, team: true }).catch(function () { return open({ k: QS.k }); }) : open({ k: QS.k }); // base pas encore à jour (schema.sql) : ancienne fonction
     }).then(function (r) {
       if (!r || !r.slug) { $('serr').style.display = 'block'; return; }
       SH = r; SH.files = r.files || {}; SH.theme = r.theme || {};
